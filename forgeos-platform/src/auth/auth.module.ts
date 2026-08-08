@@ -5,6 +5,8 @@ import { LocalStrategy } from './local.strategy';
 import { JwtStrategy } from './jwt.strategy';
 import { UsersModule } from '../users/users.module';
 import { ConfigModule } from '../config/config.module';
+import { ConfigService } from '../config/config.service';
+import { DatabaseModule } from '../database/database.module';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 
@@ -12,9 +14,11 @@ import { JwtModule } from '@nestjs/jwt';
   imports: [
     UsersModule,
     ConfigModule,
+    DatabaseModule,
     PassportModule,
     JwtModule.registerAsync({
-      useFactory: (configService) => ({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
         secret: configService.getJwtSecret(),
         signOptions: { expiresIn: configService.getJwtExpiresIn() },
       }),

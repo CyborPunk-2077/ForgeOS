@@ -6,6 +6,7 @@ import { HealthModule } from './health/health.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { AuthModule } from './auth/auth.module';
 import { RbacModule } from './rbac/rbac.module';
+import { ApiKeysModule } from './api-keys/api-keys.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { RbacModule } from './rbac/rbac.module';
     OrganizationsModule,
     AuthModule,
     RbacModule,
+    ApiKeysModule,
   ],
   controllers: [],
   providers: [],

@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -14,15 +14,75 @@ model User {
   password  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  memberships   Membership[]
   refreshTokens RefreshToken[]
+  apiKeys       ApiKey[]
 }
 
 model RefreshToken {
-  id        Int      @id @default(autoincrement())
-  token     String   @unique
+  id        Int       @id @default(autoincrement())
+  tokenHash String    @unique
   userId    Int
-  user      User     @relation(fields: [userId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
   expiresAt DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model ApiKey {
+  id          Int       @id @default(autoincrement())
+  name        String
+  keyPrefix   String
+  keyHash     String    @unique
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id])
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Organization {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique
+  description  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  members      Membership[]
+}
+
+model Membership {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id])
+  organizationId Int?
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  roleId       Int?
+  role         Role?    @relation(fields: [roleId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, organizationId])
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  permissions String[]
+  memberships Membership[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Permission {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

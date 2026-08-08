@@ -22,7 +22,8 @@ export class ForgeConfigService {
   }
 
   getPasswordHashRounds(): number {
-    return this.configService.get<number>('PASSWORD_HASH_ROUNDS') || 10;
+    const value = this.configService.get<string>('PASSWORD_HASH_ROUNDS');
+    return value ? parseInt(value, 10) : 10;
   }
 
   getNodeEnv(): string {
@@ -30,6 +31,9 @@ export class ForgeConfigService {
   }
 
   getPort(): number {
-    return this.configService.get<number>('PORT') || 3000;
+    const value = this.configService.get<string>('PORT');
+    return value ? parseInt(value, 10) : 3000;
   }
 }
+
+export { ForgeConfigService as ConfigService };
