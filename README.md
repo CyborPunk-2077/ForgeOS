@@ -1,5 +1,13 @@
 # ForgeOS - Enterprise Engineering Platform
 
+## 🎬 Platform Demo
+
+Watch ForgeOS in action and explore the engineering-platform workflow through a focused product demonstration.
+
+**[▶ Watch the ForgeOS Demo](https://abhishek-project-demos1.vercel.app/forgeos.html)**
+
+> The sections below cover the platform architecture, implementation, development workflow, and setup.
+
 ForgeOS is the internal engineering platform that will power every SaaS product we ever build. It's designed to become the foundation for scalable, maintainable, and enterprise-grade software solutions.
 
 ## Vision
