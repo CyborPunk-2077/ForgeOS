@@ -6,7 +6,7 @@ on:
       - cifi-audio-fetch-20260821
   pull_request:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 jobs:
