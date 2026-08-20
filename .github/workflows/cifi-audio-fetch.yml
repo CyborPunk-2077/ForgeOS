@@ -1,0 +1,68 @@
+name: CI-FI Hindi Audio Fetch
+
+on:
+  push:
+    branches:
+      - cifi-audio-fetch-20260821
+  workflow_dispatch:
+
+jobs:
+  render-audio:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Ensure ffmpeg
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+
+      - name: Download natural Hindi voice segments
+        run: |
+          set -euo pipefail
+          mkdir -p audio
+          curl -fL --retry 3 -o audio/s01.wav 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/31adb5a5372049579b8755f33193b320/id=2ed6d668-1a64-44b3-8ed3-0c33ce9f52f4.wav'
+          curl -fL --retry 3 -o audio/s02.wav 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/31adb5a5372049579b8755f33193b320/id=ead81f75-8edf-4f13-b51d-f07994ad9189.wav'
+          curl -fL --retry 3 -o audio/s03.wav 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/31adb5a5372049579b8755f33193b320/id=a83d3a51-b216-4f4d-acb8-6f49daf874f0.wav'
+          curl -fL --retry 3 -o audio/s04.wav 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/31adb5a5372049579b8755f33193b320/id=f54a4cc2-8b9f-40f8-88b4-32d6b2238d38.wav'
+          curl -fL --retry 3 -o audio/s05.wav 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/31adb5a5372049579b8755f33193b320/id=5d99667b-ec8f-4fb3-a2d2-5dba4902daec.wav'
+          curl -fL --retry 3 -o audio/s06.wav 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/31adb5a5372049579b8755f33193b320/id=ae3cf5ab-264f-48d6-b8d4-ab4e9737ca8e.wav'
+          curl -fL --retry 3 -o audio/s07.wav 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/31adb5a5372049579b8755f33193b320/id=dc4a7bb7-c7dc-4e5b-8f1a-9ad20049fdd9.wav'
+          curl -fL --retry 3 -o audio/s08.wav 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/31adb5a5372049579b8755f33193b320/id=0c6fb808-4212-41a4-9277-6c3a6ec9aaf6.wav'
+          curl -fL --retry 3 -o audio/s09.wav 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/31adb5a5372049579b8755f33193b320/id=b07d769e-3f3c-4eee-8b27-51747329c948.wav'
+          curl -fL --retry 3 -o audio/s10.wav 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/31adb5a5372049579b8755f33193b320/id=76f30efe-e1b6-43a7-973c-011057104285.wav'
+          curl -fL --retry 3 -o audio/s11.wav 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/31adb5a5372049579b8755f33193b320/id=4ed4fe0d-2fb5-44ac-b53d-b058a3df030c.wav'
+          curl -fL --retry 3 -o audio/s12.wav 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/31adb5a5372049579b8755f33193b320/id=69cb9773-ddbc-45b3-a9fd-51d770706fb2.wav'
+
+      - name: Scene-sync and mix narration
+        run: |
+          set -euo pipefail
+          ffmpeg -y \
+            -i audio/s01.wav -i audio/s02.wav -i audio/s03.wav -i audio/s04.wav \
+            -i audio/s05.wav -i audio/s06.wav -i audio/s07.wav -i audio/s08.wav \
+            -i audio/s09.wav -i audio/s10.wav -i audio/s11.wav -i audio/s12.wav \
+            -filter_complex "\
+              [0:a]atempo=1.09714,adelay=0:all=1[a0];\
+              [1:a]atempo=1.07504,adelay=12500:all=1[a1];\
+              [2:a]atempo=1.10759,adelay=26000:all=1[a2];\
+              [3:a]atempo=1.08042,adelay=39000:all=1[a3];\
+              [4:a]atempo=1.04988,adelay=52000:all=1[a4];\
+              [5:a]atempo=1.09714,adelay=63000:all=1[a5];\
+              [6:a]atempo=1.07515,adelay=76000:all=1[a6];\
+              [7:a]atempo=1.09476,adelay=86000:all=1[a7];\
+              [8:a]atempo=1.09715,adelay=97500:all=1[a8];\
+              [9:a]atrim=0:12,asetpts=PTS-STARTPTS,adelay=107500:all=1[a9];\
+              [10:a]atempo=1.04273,adelay=120000:all=1[a10];\
+              [11:a]atrim=0:15.5,asetpts=PTS-STARTPTS,atempo=1.19231,adelay=132000:all=1[a11];\
+              [a0][a1][a2][a3][a4][a5][a6][a7][a8][a9][a10][a11]amix=inputs=12:duration=longest:normalize=0,alimiter=limit=0.92,loudnorm=I=-16:TP=-1.5:LRA=8[m]" \
+            -map '[m]' -t 145.125 -c:a aac -b:a 192k audio/CI-FI_Hindi_Voice.m4a
+
+      - name: Upload Hindi narration artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cifi-hindi-voice
+          path: audio/CI-FI_Hindi_Voice.m4a
+          if-no-files-found: error
+          retention-days: 1
