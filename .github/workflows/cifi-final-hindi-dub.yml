@@ -1,0 +1,102 @@
+name: CI-FI Final Hindi Dub
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/cifi-final-hindi-dub.yml'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install tools
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install --quiet edge-tts
+
+      - name: Generate latest-style Hindi voice segments
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p raw fitted final
+          python - <<'PY'
+          import asyncio, edge_tts
+
+          segments = [
+            ("01", 20.0, "सोच भाई... तू किसी नॉर्मल ए-आई से कोई risky या dangerous काम करवाने की कोशिश करे, तो ज़्यादातर वो सीधा मना कर देता है। यही guardrails हैं। Model capable तो होता है, लेकिन हर चीज़ करने की permission उसे नहीं दी जाती।"),
+            ("02", 20.0, "पर असली पंगा तब शुरू होता है जब कोई वही model बदल दे, उसकी refusal वाली layer हटा दे, और बोले—अब जो पूछा जाए, बस जवाब दे। अचानक वही ए-आई जो पहले रोक रहा था, अब बिना ज़्यादा सवाल किए काम करने लगता है।"),
+            ("03", 20.0, "और इसके लिए कोई secret lab भी नहीं चाहिए। Hosted models, rented servers और ready-made tools की वजह से access बहुत आसान हो गया है। मतलब पहले जिस setup के लिए hardware, पैसा और technical knowledge चाहिए था, अब कई बार सिर्फ account और payment से काम चल जाता है।"),
+            ("04", 20.0, "सीन देख—pay करो, login करो, prompt डालो... और ए-आई code समझा भी देता है, लिख भी देता है, errors भी पकड़ता है। जिस काम में पहले documentation खंगालनी पड़ती थी, अब उसी process का बड़ा हिस्सा एक chat window के अंदर आ जाता है।"),
+            ("05", 20.0, "पहले किसी complex technical task के लिए हफ्तों research, programming और trial-and-error लग सकता था। अब ए-आई वही loop बहुत तेज़ कर देता है। Human एक idea test करता है, model कई variations निकाल देता है—और यही speed पूरी equation बदल देती है।"),
+            ("06", 20.0, "Digital चीज़ की एक और problem है—एक बार बन गई तो उसकी copy practically free है। उसे distribute करो, modify करो, बेचो या किसी और tool में जोड़ दो। इसलिए एक useful capability एक इंसान तक limited नहीं रहती; वो बहुत जल्दी network में फैल सकती है।"),
+            ("07", 20.0, "Defence side पर companies के पास firewalls, monitoring, permissions और कई security layers होती हैं। सुनने में solid लगता है... लेकिन systems आपस में जुड़े होते हैं। और कई बार पूरी chain तोड़ने के लिए attacker को हर layer नहीं, बस एक weak point चाहिए होता है।"),
+            ("08", 20.0, "यही asymmetry है। Defender को पूरा system बचाना पड़ता है; attacker को बस एक गलती ढूँढनी है। एक exposed credential, एक गलत configuration, एक पुराना component—और वहीं से रास्ता खुल सकता है। ए-आई इस search को और तेज़ कर सकता है।"),
+            ("09", 20.0, "Human analyst शायद एक घंटे में कुछ attempts carefully test करे। ए-आई उसी time में hundreds of variations चला सकता है, pattern compare कर सकता है, और थकता भी नहीं। वो genius होना ज़रूरी नहीं—बस fast, cheap और endlessly repeatable होना ही काफी powerful है।"),
+            ("10", 20.0, "पुराने time में barrier बड़ा था। Expert बनो, सालों सीखो, tools collect करो, infrastructure बनाओ। अब कई capabilities subscription पर मिल जाती हैं। मतलब skill खत्म नहीं हुई, लेकिन entry cost नीचे आ गई—और यही बदलाव बहुत बड़ा है।"),
+            ("11", 20.0, "और ध्यान रख—ये कहानी किसी super-intelligent robot की नहीं है। कई बार current ए-आई गलतियाँ करता है, hallucinate करता है, भरोसे लायक भी नहीं होता। फिर भी अगर उसे किसी teenager या beginner के हाथ में faster iteration दे दी, तो उसकी capability पहले से कई गुना बढ़ जाती है।"),
+            ("12", 20.0, "Attempts जितने cheap होंगे, लोग उतने ज़्यादा try करेंगे। Faster iteration का मतलब ज्यादा experiments। हाँ, ए-आई की गलतियाँ भी हैं, और strong defences उन्हें रोक सकती हैं। लेकिन race यही है—attack automate हो रहा है, defence को भी उतनी ही तेजी से automate होना पड़ेगा।"),
+            ("13", 20.0, "दूसरी तरफ यही technology अच्छे experts को भी boost करती है। जो काम एक expert पहले manually करता था, अब उसका बड़ा हिस्सा automate हो सकता है। Productivity ऊपर जाती है। और कुछ मामलों में बिना degree वाला banda भी subscription और सही judgement के साथ surprisingly capable बन सकता है।"),
+            ("14", 20.0, "अब इसे scale पर सोच। एक-दो लोग नहीं—millions of users को वही tools मिल रहे हैं। और अगला step सिर्फ chatbot नहीं, ए-आई agents हैं। Human manager बोलेगा—ये task handle कर—और agent research, code, testing और follow-up का बड़ा हिस्सा खुद करेगा।"),
+            ("15", 20.0, "एक इंसान के नीचे कई ए-आई workers चल सकते हैं। कोई research करे, कोई code लिखे, कोई data check करे। Cost लगातार नीचे जा रही है, capability ऊपर। मतलब automation सिर्फ faster नहीं हो रही—हर महीने ज्यादा accessible भी होती जा रही है।"),
+            ("16", 20.0, "और जैसे-जैसे automation improve होगी, वही output कम human steps में निकलने लगेगा। कुछ jobs बदलेंगी, कुछ roles छोटे होंगे, कुछ नए बनेंगे। Important point ये है कि technology का असर सिर्फ software पर नहीं—पूरी economy और security model पर पड़ेगा।"),
+            ("17", 15.458333, "तो नहीं, ये कोई Skynet वाली movie नहीं है। ज्यादा realistic बदलाव है—कम लोगों से ज्यादा output, cheaper services, और बहुत ज्यादा automated capability। फायदा भी बड़ा है, risk भी। असली सवाल ये है कि हम इस speed को handle कितनी समझदारी से करते हैं।")
+          ]
+
+          async def main():
+              for name, target, text in segments:
+                  communicate = edge_tts.Communicate(text, "hi-IN-MadhurNeural", rate="+7%", pitch="-2Hz")
+                  await communicate.save(f"raw/{name}.mp3")
+
+          asyncio.run(main())
+          PY
+
+      - name: Lock narration to exact video timeline
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python - <<'PY'
+          import subprocess, json
+          targets = [20.0]*16 + [15.458333]
+          for i, target in enumerate(targets, 1):
+              name=f"{i:02d}"
+              probe=subprocess.check_output([
+                  "ffprobe","-v","error","-show_entries","format=duration","-of","json",f"raw/{name}.mp3"
+              ], text=True)
+              dur=float(json.loads(probe)["format"]["duration"])
+              # Preserve the approved natural cadence whenever possible. Only speed up if a block would overrun.
+              usable=max(1.0,target-0.45)
+              rate=max(1.0,dur/usable)
+              if rate > 1.40:
+                  print(f"WARNING segment {name}: raw={dur:.3f}s target={target:.3f}s rate={rate:.3f}")
+              filters=["aresample=48000"]
+              if rate > 1.005:
+                  # atempo supports up to 2x; these scripts are intentionally written to stay close to 1x.
+                  filters.append(f"atempo={rate:.6f}")
+              filters += [f"apad=pad_dur={target}",f"atrim=0:{target}","asetpts=PTS-STARTPTS"]
+              subprocess.run([
+                  "ffmpeg","-y","-i",f"raw/{name}.mp3","-af",','.join(filters),
+                  "-c:a","pcm_s16le",f"fitted/{name}.wav"
+              ],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+              print(name, "raw", round(dur,3), "target", round(target,3), "tempo", round(rate,4))
+          PY
+
+      - name: Assemble and master final Hindi dub
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for i in $(seq -w 1 17); do echo "file '../fitted/${i}.wav'"; done > final/list.txt
+          ffmpeg -y -f concat -safe 0 -i final/list.txt \
+            -af "highpass=f=65,acompressor=threshold=-18dB:ratio=2:attack=10:release=120,alimiter=limit=0.95,loudnorm=I=-16:TP=-1.5:LRA=7" \
+            -t 335.458333 -c:a aac -b:a 160k final/CI-FI_Latest_Style_Hindi_VO.m4a
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/CI-FI_Latest_Style_Hindi_VO.m4a
+
+      - name: Upload Hindi dub
+        uses: actions/upload-artifact@v4
+        with:
+          name: cifi-latest-style-hindi-vo
+          path: final/CI-FI_Latest_Style_Hindi_VO.m4a
+          if-no-files-found: error
