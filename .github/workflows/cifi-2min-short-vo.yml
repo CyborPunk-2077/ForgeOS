@@ -58,7 +58,7 @@ jobs:
               print(n,dur,target,rate)
           PY
 
-          for i in $(seq -w 1 7); do echo "file '../fitted/${i}.wav'"; done > out/list.txt
+          for i in $(seq 1 7); do n=$(printf "%02d" "$i"); echo "file '../fitted/${n}.wav'"; done > out/list.txt
           ffmpeg -y -f concat -safe 0 -i out/list.txt \
             -af "highpass=f=65,acompressor=threshold=-18dB:ratio=2:attack=10:release=120,alimiter=limit=0.95,loudnorm=I=-16:TP=-1.5:LRA=7" \
             -t 118 -c:a aac -b:a 160k out/CI-FI_2min_Hindi_Short_VO.m4a
