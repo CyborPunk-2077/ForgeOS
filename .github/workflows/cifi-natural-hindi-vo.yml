@@ -10,6 +10,12 @@ jobs:
   render:
     runs-on: ubuntu-latest
     steps:
+      - name: Install ffmpeg
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
       - name: Download generated voice segments
         shell: bash
         run: |
@@ -32,7 +38,6 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          # Keep natural delivery when it fits; pad scene breathing room. Only accelerate segments that overrun.
           ffmpeg -y -i audio/01.wav -af "aresample=48000,apad=pad_dur=20,atrim=0:20" -c:a pcm_s16le out/01.wav
           ffmpeg -y -i audio/02.wav -af "aresample=48000,apad=pad_dur=20,atrim=0:20" -c:a pcm_s16le out/02.wav
           ffmpeg -y -i audio/03.wav -af "aresample=48000,apad=pad_dur=20,atrim=0:20" -c:a pcm_s16le out/03.wav
