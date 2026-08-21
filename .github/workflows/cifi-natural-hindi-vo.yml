@@ -1,0 +1,63 @@
+name: CI-FI Natural Hindi VO
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/cifi-natural-hindi-vo.yml'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download generated voice segments
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p audio out
+          curl -L --fail 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/5a09177ef53140db864193c7e1cc464d/id=cd97d4af-99c2-4dd4-b7bd-99721de9f862.wav' -o audio/01.wav
+          curl -L --fail 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/5a09177ef53140db864193c7e1cc464d/id=efbccd5e-66d4-43d4-b942-a5c3a773675b.wav' -o audio/02.wav
+          curl -L --fail 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/5a09177ef53140db864193c7e1cc464d/id=d78e1e55-f003-4c88-858a-efaf986e4f21.wav' -o audio/03.wav
+          curl -L --fail 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/5a09177ef53140db864193c7e1cc464d/id=0484248a-1b63-4c9f-9c35-0c886cc75f8b.wav' -o audio/04.wav
+          curl -L --fail 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/5a09177ef53140db864193c7e1cc464d/id=dc799181-03d8-4ab4-8bb2-674b4d29ea9a.wav' -o audio/05.wav
+          curl -L --fail 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/5a09177ef53140db864193c7e1cc464d/id=7d400127-4d6c-4cd1-88e6-76fbedc81a9e.wav' -o audio/06.wav
+          curl -L --fail 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/5a09177ef53140db864193c7e1cc464d/id=a0fe887c-4f34-4d70-91ac-dfaa7680d6f3.wav' -o audio/07.wav
+          curl -L --fail 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/5a09177ef53140db864193c7e1cc464d/id=af21ab82-8b4f-4577-bb8e-741319cbde30.wav' -o audio/08.wav
+          curl -L --fail 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/5a09177ef53140db864193c7e1cc464d/id=e4573a2c-38a0-4457-b31c-6c63a3f14266.wav' -o audio/09.wav
+          curl -L --fail 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/5a09177ef53140db864193c7e1cc464d/id=63dce08e-d40f-4967-b756-16645dec2092.wav' -o audio/10.wav
+          curl -L --fail 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/5a09177ef53140db864193c7e1cc464d/id=81745b27-37aa-4ff7-8518-caa67b6df517.wav' -o audio/11.wav
+          curl -L --fail 'https://resource2.heygen.ai/text_to_speech/fa5df6134fd44223b95d6f6c139b4fe8/5a09177ef53140db864193c7e1cc464d/id=c6ceac12-f96f-415f-af17-61cb8b693d6f.wav' -o audio/12.wav
+
+      - name: Fit segments to video scenes
+        shell: bash
+        run: |
+          set -euxo pipefail
+          # Keep natural delivery when it fits; pad scene breathing room. Only accelerate segments that overrun.
+          ffmpeg -y -i audio/01.wav -af "aresample=48000,apad=pad_dur=20,atrim=0:20" -c:a pcm_s16le out/01.wav
+          ffmpeg -y -i audio/02.wav -af "aresample=48000,apad=pad_dur=20,atrim=0:20" -c:a pcm_s16le out/02.wav
+          ffmpeg -y -i audio/03.wav -af "aresample=48000,apad=pad_dur=20,atrim=0:20" -c:a pcm_s16le out/03.wav
+          ffmpeg -y -i audio/04.wav -af "aresample=48000,apad=pad_dur=20,atrim=0:20" -c:a pcm_s16le out/04.wav
+          ffmpeg -y -i audio/05.wav -af "aresample=48000,atempo=1.16245,apad=pad_dur=20,atrim=0:20" -c:a pcm_s16le out/05.wav
+          ffmpeg -y -i audio/06.wav -af "aresample=48000,apad=pad_dur=20,atrim=0:20" -c:a pcm_s16le out/06.wav
+          ffmpeg -y -i audio/07.wav -af "aresample=48000,atempo=1.06058,apad=pad_dur=20,atrim=0:20" -c:a pcm_s16le out/07.wav
+          ffmpeg -y -i audio/08.wav -af "aresample=48000,atempo=1.09062,apad=pad_dur=20,atrim=0:20" -c:a pcm_s16le out/08.wav
+          ffmpeg -y -i audio/09.wav -af "aresample=48000,apad=pad_dur=20,atrim=0:20" -c:a pcm_s16le out/09.wav
+          ffmpeg -y -i audio/10.wav -af "aresample=48000,atempo=1.10237,apad=pad_dur=20,atrim=0:20" -c:a pcm_s16le out/10.wav
+          ffmpeg -y -i audio/11.wav -af "aresample=48000,apad=pad_dur=20,atrim=0:20" -c:a pcm_s16le out/11.wav
+          ffmpeg -y -i audio/12.wav -af "aresample=48000,atempo=1.14473,apad=pad_dur=19.625,atrim=0:19.625" -c:a pcm_s16le out/12.wav
+
+      - name: Assemble and master voiceover
+        shell: bash
+        run: |
+          set -euxo pipefail
+          printf "file '01.wav'\nfile '02.wav'\nfile '03.wav'\nfile '04.wav'\nfile '05.wav'\nfile '06.wav'\nfile '07.wav'\nfile '08.wav'\nfile '09.wav'\nfile '10.wav'\nfile '11.wav'\nfile '12.wav'\n" > out/list.txt
+          cd out
+          ffmpeg -y -f concat -safe 0 -i list.txt -af "highpass=f=65,alimiter=limit=0.95,loudnorm=I=-16:TP=-1.5:LRA=8" -t 239.625 -c:a libmp3lame -b:a 192k CI-FI_Natural_Engaged_Hindi_VO.mp3
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 CI-FI_Natural_Engaged_Hindi_VO.mp3
+
+      - name: Upload voiceover
+        uses: actions/upload-artifact@v4
+        with:
+          name: cifi-natural-hindi-vo
+          path: out/CI-FI_Natural_Engaged_Hindi_VO.mp3
+          if-no-files-found: error
