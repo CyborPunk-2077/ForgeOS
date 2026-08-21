@@ -1,0 +1,33 @@
+name: CI-FI 10s Hindi Voice Sample
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/cifi-10s-sample.yml'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install --quiet edge-tts
+
+      - name: Generate sample
+        shell: bash
+        run: |
+          set -euxo pipefail
+          TEXT='ज़रा सोचिए... जिस ए-आई को हम बस एक क्लिक समझते हैं, उसके पीछे हजारों मशीनें एक साथ काम कर रही होती हैं। और असली कहानी... यहीं से शुरू होती है।'
+          edge-tts --voice hi-IN-MadhurNeural --rate '+8%' --pitch '-4Hz' --text "$TEXT" --write-media raw.mp3
+          ffmpeg -y -i raw.mp3 -af "highpass=f=65,acompressor=threshold=-18dB:ratio=2:attack=12:release=120,loudnorm=I=-16:TP=-1.5:LRA=7,apad=pad_dur=10,atrim=0:10" -t 10 -c:a libmp3lame -b:a 192k CI-FI_10s_Hindi_Style_Sample.mp3
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 CI-FI_10s_Hindi_Style_Sample.mp3
+
+      - name: Upload sample
+        uses: actions/upload-artifact@v4
+        with:
+          name: cifi-10s-hindi-sample
+          path: CI-FI_10s_Hindi_Style_Sample.mp3
+          if-no-files-found: error
