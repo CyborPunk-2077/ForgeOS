@@ -1,0 +1,63 @@
+name: CI-FI Hindi Punjabi Voice Sample
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/cifi-hindi-punjabi-sample.yml'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install --quiet edge-tts
+
+      - name: Generate natural Hindi-Punjabi samples
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p out
+          python - <<'PY'
+          import asyncio, edge_tts, json
+
+          text = "सोच भाई... तू बस एक प्रॉम्प्ट लिखता है, और ए-आई कुछ सेकंड में पूरा वीडियो बना देता है। पर असली खेल पीछे चल रहा होता है—हज़ारों जीपीयू, बिजली, पानी... और यहीं से कहानी interesting हो जाती है।"
+
+          async def main():
+              voices = await edge_tts.list_voices()
+              pool = [v for v in voices if v.get('Locale') in ('hi-IN','pa-IN')]
+              print('AVAILABLE', json.dumps([{k:v.get(k) for k in ('ShortName','Gender','Locale','FriendlyName')} for v in pool], ensure_ascii=False))
+              male_pa = [v for v in pool if v.get('Locale')=='pa-IN' and v.get('Gender')=='Male']
+              male_hi = [v for v in pool if v.get('Locale')=='hi-IN' and v.get('Gender')=='Male']
+              choices = []
+              if male_pa:
+                  choices.append(('PunjabiLean', male_pa[0]['ShortName']))
+              if male_hi:
+                  # Prefer Madhur when available, otherwise first Hindi male.
+                  h = next((v for v in male_hi if 'Madhur' in v.get('ShortName','')), male_hi[0])
+                  choices.append(('HindiPunjabi', h['ShortName']))
+              if not choices:
+                  raise RuntimeError('No suitable hi-IN/pa-IN male voices found')
+              for label, voice in choices:
+                  print('RENDER', label, voice)
+                  communicate = edge_tts.Communicate(text, voice, rate='+7%', pitch='-2Hz')
+                  await communicate.save(f'out/{label}_raw.mp3')
+          asyncio.run(main())
+          PY
+
+          for f in out/*_raw.mp3; do
+            base="${f%_raw.mp3}"
+            ffmpeg -y -i "$f" -af "highpass=f=65,acompressor=threshold=-18dB:ratio=2:attack=10:release=120,loudnorm=I=-16:TP=-1.5:LRA=7,apad=pad_dur=12,atrim=0:12" -t 12 -c:a libmp3lame -b:a 192k "${base}.mp3"
+          done
+          rm out/*_raw.mp3
+          ls -lh out
+
+      - name: Upload samples
+        uses: actions/upload-artifact@v4
+        with:
+          name: cifi-hindi-punjabi-samples
+          path: out/*.mp3
+          if-no-files-found: error
