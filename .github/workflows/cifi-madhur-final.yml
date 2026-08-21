@@ -1,0 +1,92 @@
+name: CI-FI Madhur Hindi Final VO
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/cifi-madhur-final.yml'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install audio tools
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install --quiet edge-tts
+
+      - name: Generate native Hindi scene voiceovers
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p raw fitted final
+          python - <<'PY'
+          import subprocess
+          segments = [
+            ("01", 20.0, "सोचिए... आपने बस एक ए-आई वीडियो बनाया। कुछ सेकंड में पूरा सीन तैयार। लेकिन इसके पीछे सिर्फ जीपीयू और बिजली नहीं लगी। पानी भी खर्च हुआ—सर्वर ठंडे रखने में। अब सवाल है... एक वीडियो के लिए आखिर कितना पानी?"),
+            ("02", 20.0, "ए-आई मॉडल विशाल डेटा सेंटरों में चलते हैं। हजारों जीपीयू लगातार गर्मी पैदा करते हैं, इसलिए उन्हें ठंडा रखना पड़ता है। कई डेटा सेंटर इसके लिए पानी वाली कूलिंग इस्तेमाल करते हैं। यानी आपकी स्क्रीन के पीछे, असली दुनिया में पानी भी काम कर रहा होता है।"),
+            ("03", 20.0, "और ये सब आपके कमरे में नहीं हो रहा। आपका प्रॉम्प्ट शायद सैकड़ों किलोमीटर दूर किसी डेटा सेंटर तक जाता है। वहाँ सर्वर चलते हैं, कूलिंग चलती है, बिजली लगती है—और उस बिजली को बनाने वाले पावर प्लांट भी कई जगह पानी इस्तेमाल करते हैं।"),
+            ("04", 20.0, "यहीं से वो वायरल दावा आया—कि चैटजीपीटी पर बीस से पचास प्रॉम्प्ट चलाने में करीब आधा लीटर पानी लग सकता है। सुनने में चौंकाने वाला है। लेकिन ध्यान रहे, ये दो हजार तेईस के एक अनुमान पर आधारित था; हर प्रॉम्प्ट के लिए तय नियम नहीं।"),
+            ("05", 20.0, "नए आंकड़ों में तस्वीर काफी अलग दिखती है। कुछ अनुमानों में एक टेक्स्ट प्रॉम्प्ट लगभग शून्य दशमलव दो छह मिलीलीटर, और कहीं करीब शून्य दशमलव तीन दो मिलीलीटर बताया गया—यानी कुछ बूंदें। आधी लीटर की बोतल से बहुत कम।"),
+            ("06", 20.0, "तो सही नंबर कौन-सा है? यही मुश्किल हिस्सा है। पानी का इस्तेमाल इस बात पर बदलता है कि कौन-सा मॉडल चल रहा है, डेटा सेंटर किस देश में है, बाहर का तापमान क्या है, कूलिंग कैसी है, और बिजली कहाँ से आ रही है। एक फिक्स नंबर देना आसान नहीं।"),
+            ("07", 20.0, "और टेक्स्ट प्रॉम्प्ट को ए-आई वीडियो के बराबर समझना भी गलत होगा। टेक्स्ट बनाना तुलनात्मक रूप से हल्का काम है। वीडियो में कई फ्रेम, मोशन और विजुअल कंसिस्टेंसी संभालनी पड़ती है। इसलिए कम्प्यूटेशन—और अक्सर ऊर्जा—कई गुना बढ़ सकती है।"),
+            ("08", 20.0, "ऊपर से हम पहली कोशिश में हर वीडियो रख भी नहीं लेते। पहला जनरेशन अजीब लगा, दूसरा मोशन गलत, तीसरे में चेहरा बिगड़ गया... फिर दोबारा बनाओ। स्क्रीन पर आपको सिर्फ फाइनल वीडियो दिखता है, लेकिन उसके पीछे कई छिपे हुए प्रयास हो सकते हैं।"),
+            ("09", 20.0, "यही वजह है कि सिर्फ फाइनल क्लिप देखकर असली खर्च समझ नहीं आता। आपको वीडियो दिखता है; डेटा सेंटर का पूरा लोड नहीं। कितनी बार मॉडल चला, कितनी ऊर्जा लगी, कौन-सी मशीनें इस्तेमाल हुईं—ये जानकारी आम तौर पर स्क्रीन पर दिखाई ही नहीं देती।"),
+            ("10", 20.0, "इसलिए ए-आई वीडियो के लिए कोई एक भरोसेमंद, सार्वभौमिक पानी का आंकड़ा अभी नहीं है। अलग मॉडल और अलग सिस्टम में अंतर बहुत बड़ा हो सकता है—कुछ मामलों में हजार गुना तक। और कंपनियाँ हर वर्कलोड का पूरा उपयोग डेटा सार्वजनिक भी नहीं करतीं।"),
+            ("11", 20.0, "लेकिन एक प्रॉम्प्ट छोटा है, इसलिए असर छोटा ही होगा—ये भी पूरी कहानी नहीं। जब लाखों लोग रोज़ ए-आई इस्तेमाल करते हैं, और प्रॉम्प्ट की संख्या अरबों तक पहुँचती है, तो छोटी-छोटी मात्राएँ जुड़कर बहुत बड़ी इंफ्रास्ट्रक्चर डिमांड बन सकती हैं।"),
+            ("12", 19.625, "तो अगली बार सिर्फ पानी की बोतल वाला आंकड़ा मत देखिए। असली कहानी है—कूलिंग, बिजली, मॉडल की दक्षता, दोबारा किए गए जनरेशन और बहुत बड़ा स्केल। ए-आई का पानी हमें दिखाई नहीं देता... लेकिन इसका मतलब ये नहीं कि उसका असर मौजूद नहीं है।")
+          ]
+          for name, target, text in segments:
+              subprocess.run([
+                  "edge-tts", "--voice", "hi-IN-MadhurNeural", "--rate", "+3%",
+                  "--text", text, "--write-media", f"raw/{name}.mp3"
+              ], check=True)
+          PY
+
+      - name: Lock every narration block to the exact scene timeline
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python - <<'PY'
+          import subprocess, json
+          targets = [20.0]*11 + [19.625]
+          for i, target in enumerate(targets, 1):
+              name=f"{i:02d}"
+              probe=subprocess.check_output([
+                  "ffprobe","-v","error","-show_entries","format=duration","-of","json",f"raw/{name}.mp3"
+              ], text=True)
+              dur=float(json.loads(probe)["format"]["duration"])
+              usable=max(1.0,target-0.7)
+              rate=max(1.0,dur/usable)
+              if rate > 2.0:
+                  raise RuntimeError(f"segment {name} unexpectedly long: {dur}")
+              filters=["aresample=48000"]
+              if rate > 1.005:
+                  filters.append(f"atempo={rate:.6f}")
+              filters += [f"apad=pad_dur={target}",f"atrim=0:{target}","asetpts=PTS-STARTPTS"]
+              subprocess.run([
+                  "ffmpeg","-y","-i",f"raw/{name}.mp3","-af",','.join(filters),
+                  "-c:a","pcm_s16le",f"fitted/{name}.wav"
+              ],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+              print(name,"raw",round(dur,3),"target",target,"rate",round(rate,4))
+          PY
+
+      - name: Assemble and master final voiceover
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for i in $(seq -w 1 12); do echo "file '../fitted/${i}.wav'"; done > final/list.txt
+          ffmpeg -y -f concat -safe 0 -i final/list.txt \
+            -af "highpass=f=60,acompressor=threshold=-18dB:ratio=2:attack=12:release=120,alimiter=limit=0.95,loudnorm=I=-16:TP=-1.5:LRA=8" \
+            -t 239.625 -c:a libmp3lame -b:a 192k final/CI-FI_Native_Hindi_Madhur_VO.mp3
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/CI-FI_Native_Hindi_Madhur_VO.mp3
+
+      - name: Upload voiceover
+        uses: actions/upload-artifact@v4
+        with:
+          name: cifi-native-hindi-madhur-vo
+          path: final/CI-FI_Native_Hindi_Madhur_VO.mp3
+          if-no-files-found: error
