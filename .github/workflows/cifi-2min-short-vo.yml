@@ -1,0 +1,72 @@
+name: CI-FI 2min Hindi Short VO
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/cifi-2min-short-vo.yml'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install --quiet edge-tts
+
+      - name: Generate and fit narration
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p raw fitted out
+          python - <<'PY'
+          import asyncio, edge_tts
+          segments = [
+            ("01",16.0,"सोच भाई... एक normal ए-आई risky काम पर मना कर देता है—ये guardrails हैं। लेकिन वही model अगर refusal layer हटाकर चलाया जाए, तो capability वही रहती है, बस रोक कम हो जाती है। और यहीं से असली risk शुरू होता है।"),
+            ("02",16.0,"और अब इसके लिए secret lab नहीं चाहिए। Hosted models, rented servers और subscriptions ने entry cost बहुत नीचे ला दी। Pay करो, login करो, prompt डालो—ए-आई code समझाता है, लिखता है, errors पकड़ता है। जो setup पहले expert-level लगता था, अब काफी accessible है।"),
+            ("03",16.0,"सबसे बड़ा फर्क speed है। पहले research, programming और trial-and-error में दिन या हफ्ते लगते थे; अब model seconds में variations निकाल देता है। और digital चीज़ एक बार बन गई, तो copy और distribution almost free—इसलिए एक capability बहुत जल्दी फैल सकती है।"),
+            ("04",18.0,"Defence में firewalls, monitoring और permissions होती हैं, लेकिन defender को पूरा system बचाना पड़ता है। Attacker को बस एक weak point चाहिए—एक exposed credential, गलत configuration या पुराना component। ए-आई hundreds of attempts compare कर सकता है, इसलिए search fast, cheap और repeatable हो जाती है।"),
+            ("05",17.0,"और ध्यान रख—ये कोई perfect superintelligence नहीं। ए-आई hallucinate करता है, गलतियाँ करता है। फिर भी अगर beginner को faster iteration मिल जाए, उसकी practical capability बढ़ जाती है। Attempts जितने cheap होंगे, उतने ज्यादा लोग try करेंगे—इसलिए defence को भी automation की speed पकड़नी पड़ेगी।"),
+            ("06",18.0,"लेकिन यही technology अच्छे experts को भी boost करती है। Productivity कई गुना बढ़ सकती है। अब millions users के पास यही tools हैं, और next step agents हैं—एक इंसान research, coding, testing और follow-up के लिए कई ए-आई workers चला सकता है। Cost नीचे, capability ऊपर।"),
+            ("07",17.0,"तो point Skynet नहीं है। Real change है—कम human steps में ज्यादा output, cheaper services, बदलती jobs, और security का नया pressure। फायदा बहुत बड़ा है, risk भी। असली सवाल ये नहीं कि ए-आई powerful होगा या नहीं; सवाल है, हम इस speed को कितनी समझदारी से handle करेंगे।")
+          ]
+          async def main():
+              for name,target,text in segments:
+                  c=edge_tts.Communicate(text,"hi-IN-MadhurNeural",rate="+7%",pitch="-2Hz")
+                  await c.save(f"raw/{name}.mp3")
+          asyncio.run(main())
+          PY
+
+          python - <<'PY'
+          import subprocess, json
+          targets=[16,16,16,18,17,18,17]
+          for i,target in enumerate(targets,1):
+              n=f"{i:02d}"
+              meta=json.loads(subprocess.check_output(["ffprobe","-v","error","-show_entries","format=duration","-of","json",f"raw/{n}.mp3"],text=True))
+              dur=float(meta["format"]["duration"])
+              usable=target-0.35
+              rate=max(1.0,dur/usable)
+              filters=["aresample=48000"]
+              while rate>2.0:
+                  filters.append("atempo=2.0")
+                  rate/=2.0
+              if rate>1.005: filters.append(f"atempo={rate:.6f}")
+              filters += [f"apad=pad_dur={target}",f"atrim=0:{target}","asetpts=PTS-STARTPTS"]
+              subprocess.run(["ffmpeg","-y","-i",f"raw/{n}.mp3","-af",','.join(filters),"-c:a","pcm_s16le",f"fitted/{n}.wav"],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+              print(n,dur,target,rate)
+          PY
+
+          for i in $(seq -w 1 7); do echo "file '../fitted/${i}.wav'"; done > out/list.txt
+          ffmpeg -y -f concat -safe 0 -i out/list.txt \
+            -af "highpass=f=65,acompressor=threshold=-18dB:ratio=2:attack=10:release=120,alimiter=limit=0.95,loudnorm=I=-16:TP=-1.5:LRA=7" \
+            -t 118 -c:a aac -b:a 160k out/CI-FI_2min_Hindi_Short_VO.m4a
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 out/CI-FI_2min_Hindi_Short_VO.m4a
+
+      - name: Upload narration
+        uses: actions/upload-artifact@v4
+        with:
+          name: cifi-2min-hindi-short-vo
+          path: out/CI-FI_2min_Hindi_Short_VO.m4a
+          if-no-files-found: error
