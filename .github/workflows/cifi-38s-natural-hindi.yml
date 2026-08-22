@@ -1,0 +1,79 @@
+name: CI-FI 38s Natural Hindi VO
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/cifi-38s-natural-hindi.yml'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install tools
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install --quiet edge-tts
+
+      - name: Generate natural Hindi segments
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p raw fitted final
+          python - <<'PY'
+          import asyncio, edge_tts
+          segments = [
+            ("01", "Designers ke liye ye tool literally game changer hai. Bas apni app ka idea likho, aur kuch hi seconds mein ready UI concepts saamne aa jaate hain."),
+            ("02", "Dating app ho, weather app ya kuch aur — prompt do, aur ye multiple screens aur layouts generate kar deta hai. Starting design mein ghanton ka kaam bach sakta hai."),
+            ("03", "Aur best part? Design pasand na aaye to sab kuch dobara banane ki zarurat nahi. Element select karo, colors, layout ya style badalne ko bolo — aur change ho jayega."),
+            ("04", "Text ya copy badalni ho to bas words likh do. Basically, idea se editable app design tak ka poora flow kaafi fast ho jaata hai — aur designers ke liye ye genuinely useful hai."),
+          ]
+          async def main():
+              for name, text in segments:
+                  c = edge_tts.Communicate(text, "hi-IN-MadhurNeural", rate="+7%", pitch="-2Hz")
+                  await c.save(f"raw/{name}.mp3")
+          asyncio.run(main())
+          PY
+
+      - name: Fit to exact timeline
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python - <<'PY'
+          import subprocess, json
+          targets = [9.6, 9.6, 9.6, 9.745125]
+          for i, target in enumerate(targets, 1):
+              name=f"{i:02d}"
+              p=subprocess.check_output(["ffprobe","-v","error","-show_entries","format=duration","-of","json",f"raw/{name}.mp3"],text=True)
+              dur=float(json.loads(p)["format"]["duration"])
+              usable=max(1.0,target-0.28)
+              tempo=max(1.0,dur/usable)
+              if tempo>1.45:
+                  print('WARNING fast tempo',name,dur,target,tempo)
+              filt=["aresample=48000"]
+              if tempo>1.005:
+                  filt.append(f"atempo={tempo:.6f}")
+              filt += [f"apad=pad_dur={target}",f"atrim=0:{target}","asetpts=PTS-STARTPTS"]
+              subprocess.run(["ffmpeg","-y","-i",f"raw/{name}.mp3","-af",','.join(filt),"-c:a","pcm_s16le",f"fitted/{name}.wav"],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+              print(name,'raw',round(dur,3),'target',round(target,3),'tempo',round(tempo,3))
+          PY
+
+      - name: Assemble master VO
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for i in 01 02 03 04; do echo "file '../fitted/${i}.wav'"; done > final/list.txt
+          ffmpeg -y -f concat -safe 0 -i final/list.txt \
+            -af "highpass=f=65,acompressor=threshold=-18dB:ratio=2:attack=10:release=120,alimiter=limit=0.95,loudnorm=I=-16:TP=-1.5:LRA=7" \
+            -t 38.545125 -c:a aac -b:a 160k final/CI-FI_38s_Natural_Hindi_VO.m4a
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/CI-FI_38s_Natural_Hindi_VO.m4a
+
+      - name: Upload narration
+        uses: actions/upload-artifact@v4
+        with:
+          name: cifi-38s-natural-hindi-vo
+          path: final/CI-FI_38s_Natural_Hindi_VO.m4a
+          if-no-files-found: error
