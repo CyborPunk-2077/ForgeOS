@@ -1,0 +1,83 @@
+name: CI-FI 1927 Scene Synced Hindi VO
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/cifi-1927-scene-synced-hindi.yml'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install --quiet edge-tts
+
+      - name: Generate natural Hindi segments
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p raw fitted final
+          python - <<'PY'
+          import asyncio, edge_tts
+          segments = [
+            ('01', 5.5, 'ये है चेन जीपीटी—क्रिप्टो और वेब थ्री के लिए बना एक ए-आई प्लेटफॉर्म।'),
+            ('02', 6.0, 'इसके अंदर चैटबॉट से लेकर एन-एफ-टी और ब्लॉकचेन टूल्स तक कई सर्विसेज़ मिलती हैं।'),
+            ('03', 6.5, 'चैटबॉट क्रिप्टो या ब्लॉकचेन से जुड़े सवालों के जवाब और ज़रूरी जानकारी तुरंत देता है।'),
+            ('04', 6.5, 'कोड चाहिए तो ये जनरेट कर सकता है, और स्मार्ट कॉन्ट्रैक्ट बनाने या ऑडिट करने में भी मदद करता है।'),
+            ('05', 7.0, 'एन-एफ-टी जनरेटर में बस एक प्रॉम्प्ट डालो, और कुछ ही सेकंड में अलग-अलग इमेज तैयार हो जाती हैं।'),
+            ('06', 6.5, 'ब्लॉकचेन साइड पर ये डेटा और एक्टिविटी में पैटर्न या संदिग्ध चीज़ें पहचानने में भी काम आता है।'),
+            ('07', 7.0, 'एनालिटिक्स टूल मार्केट और ऑन-चेन डेटा को देखकर फैसलों के लिए काम के सिग्नल दिखाता है।'),
+            ('08', 7.0, 'इसका ए-आई मॉडल टेक्निकल एनालिसिस आसान करता है—चार्ट्स, ट्रेंड्स और ज़रूरी पैटर्न जल्दी समझाता है।'),
+            ('09', 7.118, 'और आखिर में, चेन जीपीटी क्रिप्टो न्यूज़ और अपडेट्स को क्यूरेट करके काम की जानकारी एक ही जगह देता है।'),
+          ]
+          async def main():
+              for name, target, text in segments:
+                  tts = edge_tts.Communicate(text, 'hi-IN-MadhurNeural', rate='+5%', pitch='-2Hz')
+                  await tts.save(f'raw/{name}.mp3')
+          asyncio.run(main())
+          PY
+
+      - name: Fit to exact scene windows
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python - <<'PY'
+          import subprocess, json
+          targets=[5.5,6.0,6.5,6.5,7.0,6.5,7.0,7.0,7.118]
+          for i,target in enumerate(targets,1):
+              name=f'{i:02d}'
+              p=subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','json',f'raw/{name}.mp3'],text=True)
+              dur=float(json.loads(p)['format']['duration'])
+              usable=max(0.8,target-0.16)
+              ratio=dur/usable
+              filters=['aresample=48000']
+              if ratio > 1.005:
+                  r=ratio
+                  while r > 2.0:
+                      filters.append('atempo=2.0'); r/=2.0
+                  filters.append(f'atempo={r:.6f}')
+              filters += [f'apad=pad_dur={target}',f'atrim=0:{target}','asetpts=PTS-STARTPTS']
+              subprocess.run(['ffmpeg','-y','-i',f'raw/{name}.mp3','-af',','.join(filters),'-ac','1','-c:a','pcm_s16le',f'fitted/{name}.wav'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+              print(name,'raw=',round(dur,3),'target=',round(target,3),'tempo=',round(max(1.0,ratio),3))
+          PY
+
+      - name: Assemble and master VO
+        shell: bash
+        run: |
+          set -euxo pipefail
+          printf "file '../fitted/01.wav'\nfile '../fitted/02.wav'\nfile '../fitted/03.wav'\nfile '../fitted/04.wav'\nfile '../fitted/05.wav'\nfile '../fitted/06.wav'\nfile '../fitted/07.wav'\nfile '../fitted/08.wav'\nfile '../fitted/09.wav'\n" > final/list.txt
+          ffmpeg -y -f concat -safe 0 -i final/list.txt \
+            -af "highpass=f=65,acompressor=threshold=-18dB:ratio=2:attack=10:release=120,alimiter=limit=0.95,loudnorm=I=-16:TP=-1.5:LRA=7" \
+            -t 59.118 -c:a aac -b:a 160k final/CI-FI_1927_Scene_Synced_Hindi_VO.m4a
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/CI-FI_1927_Scene_Synced_Hindi_VO.m4a
+
+      - name: Upload narration
+        uses: actions/upload-artifact@v4
+        with:
+          name: cifi-1927-scene-synced-hindi-vo
+          path: final/CI-FI_1927_Scene_Synced_Hindi_VO.m4a
+          if-no-files-found: error
