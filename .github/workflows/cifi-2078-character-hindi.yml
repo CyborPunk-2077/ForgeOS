@@ -23,9 +23,8 @@ jobs:
           mkdir -p raw fitted final
           python - <<'PY'
           import asyncio, edge_tts
-          # id, start, end, text, voice, rate, pitch, volume
           segs = [
-            ('01',0.016,5.440,'ऑनलाइन प्राइवेसी चाहिए... शुरुआत कहाँ से करूँ? कौन से टूल ज़रूरी हैं?','en-IN-PrabhatNeural','-4%','-8Hz','+0%'),
+            ('01',0.016,5.440,'Online privacy chahiye... shuruaat kahan se karun? Kaun se tools zaroori hain?','en-IN-PrabhatNeural','-4%','-8Hz','+0%'),
             ('02',5.872,8.000,'वॉल्टर... पहली गलती—क्रोम!','hi-IN-MadhurNeural','+2%','+8Hz','+8%'),
             ('03',8.800,12.176,'प्राइवेसी चाहिए और क्रोम चला रहा है? कमाल है!','hi-IN-MadhurNeural','+8%','+12Hz','+10%'),
             ('04',13.296,16.080,'पहले ब्राउज़र बदल. बस.','hi-IN-MadhurNeural','-2%','+2Hz','+3%'),
@@ -93,14 +92,11 @@ jobs:
           args=[]; chains=[]; labels=[]
           for i,s in enumerate(starts,1):
               args += ['-i',f'fitted/{i:02d}.wav']
-              delay=round(s*1000)
-              lab=f'a{i}'
-              chains.append(f'[{i-1}:a]adelay={delay}|{delay}[{lab}]')
-              labels.append(f'[{lab}]')
+              delay=round(s*1000); lab=f'a{i}'
+              chains.append(f'[{i-1}:a]adelay={delay}|{delay}[{lab}]'); labels.append(f'[{lab}]')
           mix=''.join(labels)+f'amix=inputs={len(labels)}:normalize=0,acompressor=threshold=-24dB:ratio=1.35:attack=20:release=250,alimiter=limit=0.96,loudnorm=I=-16:TP=-1.5:LRA=13[out]'
           fc=';'.join(chains+[mix])
-          cmd=['ffmpeg','-y',*args,'-filter_complex',fc,'-map','[out]','-t','69.612','-c:a','aac','-b:a','192k','final/CI-FI_2078_Character_Hindi_V3.m4a']
-          subprocess.run(cmd,check=True)
+          subprocess.run(['ffmpeg','-y',*args,'-filter_complex',fc,'-map','[out]','-t','69.612','-c:a','aac','-b:a','192k','final/CI-FI_2078_Character_Hindi_V3.m4a'],check=True)
           PY
           ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/CI-FI_2078_Character_Hindi_V3.m4a
 
