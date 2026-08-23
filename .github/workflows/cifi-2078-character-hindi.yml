@@ -1,0 +1,94 @@
+name: CI-FI 2078 Character Hindi VO
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/cifi-2078-character-hindi.yml'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install --quiet edge-tts
+
+      - name: Generate character performances
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p raw fitted final
+          python - <<'PY'
+          import asyncio, edge_tts
+          segments = [
+            # Older/stern character: deliberately slower, lower profile, different Indian male voice.
+            ('01', 5.800, 'Online privacy chahiye? Toh sabse zaroori tools kaun se hain... aur shuruaat kahan se karun?', 'en-IN-PrabhatNeural', '-8%', '-8Hz'),
+            # Pirate/guide character: native Hindi male, sharper and more animated.
+            ('02', 7.000, 'वॉल्टर, पहली गलती—क्रोम! प्राइवेसी की बात करनी है तो पहले ब्राउज़र बदल।', 'hi-IN-MadhurNeural', '+5%', '+4Hz'),
+            ('03', 10.800, 'वीपीएन, एक्सटेंशन्स, टॉरेंट क्लाइंट, एंटीवायरस—सब आएँगे। लेकिन बेस गड़बड़ हुआ, तो बाकी सब बेकार।', 'hi-IN-MadhurNeural', '+6%', '+2Hz'),
+            ('04', 6.900, 'ब्राउज़र में फ़ायरफ़ॉक्स, लिब्रेवुल्फ़ या मुलवाड ब्राउज़र। तीनों में से कोई एक।', 'hi-IN-MadhurNeural', '+4%', '+1Hz'),
+            ('05', 4.700, 'लिब्रेवुल्फ़ खास तौर पर प्राइवेसी और सिक्योरिटी के लिए हार्डन्ड है।', 'hi-IN-MadhurNeural', '-1%', '-1Hz'),
+            ('06', 5.400, 'वीपीएन? प्रोटॉन या मुलवाड। सिंपल—दोनों मजबूत विकल्प।', 'hi-IN-MadhurNeural', '+5%', '+3Hz'),
+            ('07', 7.200, 'प्रोटॉन स्विट्ज़रलैंड बेस्ड और ओपन-सोर्स है। मुलवाड स्वीडन बेस्ड है, और साइन-अप भी मिनिमल।', 'hi-IN-MadhurNeural', '+1%', '-1Hz'),
+            ('08', 6.900, 'ब्राउज़र पर यूब्लॉक ओरिजिन ज़रूर। और फ़ास्टफ़ॉरवर्ड जैसे टूल बेकार रीडायरेक्ट्स कम करते हैं।', 'hi-IN-MadhurNeural', '+6%', '+2Hz'),
+            ('09', 4.800, 'छोटे टूल हैं... पर ब्राउज़िंग का झंझट काफी कम कर देते हैं।', 'hi-IN-MadhurNeural', '+1%', '+0Hz'),
+            ('10', 6.200, 'टॉरेंट क्लाइंट में क्यूबिटटॉरेंट या ट्रांसमिशन—क्लीन, सीधा, बिना फालतू बकवास।', 'hi-IN-MadhurNeural', '+5%', '+2Hz'),
+            ('11', 3.912, 'बस। सेफ रहो... और अनजान फ़ाइल पर आँख बंद करके भरोसा मत करना।', 'hi-IN-MadhurNeural', '-3%', '-3Hz'),
+          ]
+          async def main():
+              for name, target, text, voice, rate, pitch in segments:
+                  tts = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
+                  await tts.save(f'raw/{name}.mp3')
+          asyncio.run(main())
+          PY
+
+      - name: Fit naturally to scene windows
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python - <<'PY'
+          import subprocess, json
+          targets=[5.800,7.000,10.800,6.900,4.700,5.400,7.200,6.900,4.800,6.200,3.912]
+          for i,target in enumerate(targets,1):
+              name=f'{i:02d}'
+              meta=subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','json',f'raw/{name}.mp3'],text=True)
+              dur=float(json.loads(meta)['format']['duration'])
+              usable=max(0.8,target-0.10)
+              ratio=dur/usable
+              filters=['aresample=48000']
+              # Only compress timing when necessary; keep dramatic pauses if line is already shorter.
+              if ratio > 1.003:
+                  r=ratio
+                  while r > 2.0:
+                      filters.append('atempo=2.0'); r/=2.0
+                  filters.append(f'atempo={r:.6f}')
+              if i == 1:
+                  # Darker, heavier presence for the stern opening character.
+                  filters += ['highpass=f=55','equalizer=f=180:t=q:w=1.0:g=4','equalizer=f=3200:t=q:w=1.2:g=-1.5']
+              else:
+                  # Crisper, more animated guide character without flattening dynamics.
+                  filters += ['highpass=f=70','equalizer=f=2600:t=q:w=1.1:g=1.5']
+              filters += [f'apad=pad_dur={target}',f'atrim=0:{target}','asetpts=PTS-STARTPTS']
+              subprocess.run(['ffmpeg','-y','-i',f'raw/{name}.mp3','-af',','.join(filters),'-ac','1','-c:a','pcm_s16le',f'fitted/{name}.wav'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+              print(name,'raw=',round(dur,3),'target=',round(target,3),'tempo=',round(max(1.0,ratio),3))
+          PY
+
+      - name: Assemble cinematic dialogue track
+        shell: bash
+        run: |
+          set -euxo pipefail
+          printf "file '../fitted/01.wav'\nfile '../fitted/02.wav'\nfile '../fitted/03.wav'\nfile '../fitted/04.wav'\nfile '../fitted/05.wav'\nfile '../fitted/06.wav'\nfile '../fitted/07.wav'\nfile '../fitted/08.wav'\nfile '../fitted/09.wav'\nfile '../fitted/10.wav'\nfile '../fitted/11.wav'\n" > final/list.txt
+          ffmpeg -y -f concat -safe 0 -i final/list.txt \
+            -af "acompressor=threshold=-24dB:ratio=1.45:attack=18:release=220,alimiter=limit=0.95,loudnorm=I=-16:TP=-1.5:LRA=12" \
+            -t 69.612 -c:a aac -b:a 192k final/CI-FI_2078_Character_Hindi_VO.m4a
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/CI-FI_2078_Character_Hindi_VO.m4a
+
+      - name: Upload narration
+        uses: actions/upload-artifact@v4
+        with:
+          name: cifi-2078-character-hindi-vo
+          path: final/CI-FI_2078_Character_Hindi_VO.m4a
+          if-no-files-found: error
