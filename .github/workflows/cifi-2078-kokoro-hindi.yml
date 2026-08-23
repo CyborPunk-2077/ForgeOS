@@ -1,6 +1,9 @@
 name: CI-FI 2078 Kokoro Hindi Character VO
 
 on:
+  pull_request:
+    branches:
+      - master
   push:
     branches:
       - cifi-2078-kokoro-hindi-20260823
@@ -32,8 +35,6 @@ jobs:
 
           pipeline = KPipeline(lang_code='h')
 
-          # Fresh script written from zero for the exact speaking beats of the source.
-          # Character A = older/deeper controlled. Character B = younger sarcastic/animated.
           segs = [
               ('01',0.016,5.440,'ऑनलाइन प्राइवेसी शुरू करनी है... कहाँ से शुरू करूँ? कौन से टूल्स सच में ज़रूरी हैं?','hm_omega',0.92),
               ('02',5.872,8.000,'रुको... तुम अभी भी क्रोम चला रहे हो?!','hm_psi',1.02),
@@ -67,12 +68,9 @@ jobs:
               audio=np.concatenate(chunks)
               sf.write(f'raw/{name}.wav', audio, 24000)
 
-          # Gentle fit only. Hard cap at 1.20x; script is intentionally short enough to avoid crushed acting.
           for name,start,end,text,voice,speed in segs:
               target=end-start
-              meta=json.loads(subprocess.check_output([
-                  'ffprobe','-v','error','-show_entries','format=duration','-of','json',f'raw/{name}.wav'
-              ], text=True))
+              meta=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','json',f'raw/{name}.wav'], text=True))
               dur=float(meta['format']['duration'])
               usable=max(0.45,target-0.06)
               ratio=dur/usable
@@ -81,19 +79,14 @@ jobs:
               filters=['aresample=48000']
               if ratio > 1.003:
                   filters.append(f'atempo={ratio:.6f}')
-              # Keep dynamics; only light character-specific shaping.
               if name=='01':
                   filters += ['highpass=f=48','equalizer=f=155:t=q:w=1.0:g=2.0','equalizer=f=3200:t=q:w=1.0:g=-1.0']
               else:
                   filters += ['highpass=f=65','equalizer=f=250:t=q:w=1.0:g=0.7','equalizer=f=3100:t=q:w=1.0:g=1.1']
               filters += [f'apad=pad_dur={target}',f'atrim=0:{target}','asetpts=PTS-STARTPTS']
-              subprocess.run([
-                  'ffmpeg','-y','-i',f'raw/{name}.wav','-af',','.join(filters),
-                  '-ac','1','-c:a','pcm_s16le',f'fitted/{name}.wav'
-              ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+              subprocess.run(['ffmpeg','-y','-i',f'raw/{name}.wav','-af',','.join(filters),'-ac','1','-c:a','pcm_s16le',f'fitted/{name}.wav'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
               print(name,'raw',round(dur,3),'window',round(target,3),'tempo',round(max(1.0,ratio),3))
 
-          # Place every line on the original speaking beat.
           args=[]; chains=[]; labels=[]
           for idx,(name,start,end,*_) in enumerate(segs):
               args += ['-i',f'fitted/{name}.wav']
@@ -101,10 +94,7 @@ jobs:
               chains.append(f'[{idx}:a]adelay={delay}|{delay}[{lab}]')
               labels.append(f'[{lab}]')
           mix=''.join(labels)+f'amix=inputs={len(labels)}:normalize=0,acompressor=threshold=-20dB:ratio=1.12:attack=35:release=340,alimiter=limit=0.97,loudnorm=I=-16:TP=-1.5:LRA=16,apad=pad_dur=69.612,atrim=0:69.612[out]'
-          subprocess.run([
-              'ffmpeg','-y',*args,'-filter_complex',';'.join(chains+[mix]),'-map','[out]',
-              '-t','69.612','-c:a','aac','-b:a','192k','final/CI-FI_2078_Kokoro_Character_Hindi_V1.m4a'
-          ], check=True)
+          subprocess.run(['ffmpeg','-y',*args,'-filter_complex',';'.join(chains+[mix]),'-map','[out]','-t','69.612','-c:a','aac','-b:a','192k','final/CI-FI_2078_Kokoro_Character_Hindi_V1.m4a'],check=True)
           PY
           python /tmp/render.py
           ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/CI-FI_2078_Kokoro_Character_Hindi_V1.m4a
