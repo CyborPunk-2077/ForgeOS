@@ -27,6 +27,8 @@ jobs:
           python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.5.1
           python -m pip install soundfile numpy
           python -m pip install git+https://github.com/huggingface/parler-tts.git
+          python -m pip uninstall -y torchaudio
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torchaudio==2.5.1
 
       - name: Render three parody-style Hindi voices and mixed clean VO
         env:
@@ -43,7 +45,6 @@ jobs:
           torch.set_num_threads(max(2, os.cpu_count() or 2))
           model_id = 'ai4b-hf/indic-parler-tts-pretrained-v3'
           device = 'cpu'
-
           print('Loading model:', model_id)
           model = ParlerTTSForConditionalGeneration.from_pretrained(model_id).to(device)
           tokenizer = AutoTokenizer.from_pretrained(model_id)
