@@ -33,7 +33,7 @@ jobs:
       - name: Download public Hindi model reference
         run: |
           mkdir -p f5work out
-          curl -L --fail --retry 3 -o f5work/ref.wav 'https://huggingface.co/SPRINGLab/F5-Hindi-24KHz/resolve/main/samples/dear_friends_cleaned_1001.wav?download=true'
+          curl -L --fail --retry 3 -o f5work/ref.wav 'https://huggingface.co/SPRINGLab/F5-Hindi-24KHz/resolve/main/samples/output1.wav?download=true'
           ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 f5work/ref.wav
 
       - name: Write Hindi-small model config and script
@@ -74,7 +74,7 @@ jobs:
           ckpt_file = "hf://SPRINGLab/F5-Hindi-24KHz/model_2500000.safetensors"
           vocab_file = "hf://SPRINGLab/F5-Hindi-24KHz/vocab.txt"
           ref_audio = "f5work/ref.wav"
-          ref_text = "अपने पीछे खड़े एक आदमी को इशारा किया तो वो आदमी खींचते हुए नवीन जोशी को वहां से बाहर ले गया । तब तक थप्पड़ की आवाज सुनकर कालिंदी और"
+          ref_text = "उसके दोस्त, प्रेमिकाएँ, और रिश्तेदार, उसे इसी नाम से बुलाते थे, और वो भी, अक्सर समझ जाता था, कि क्वैं उसी को संबोधित है"
           gen_file = "f5work/dialogue.txt"
           output_dir = "f5work/generated"
           output_file = "raw_full.wav"
@@ -85,17 +85,17 @@ jobs:
 
           [voices.statesman]
           ref_audio = "f5work/ref.wav"
-          ref_text = "अपने पीछे खड़े एक आदमी को इशारा किया तो वो आदमी खींचते हुए नवीन जोशी को वहां से बाहर ले गया । तब तक थप्पड़ की आवाज सुनकर कालिंदी और"
+          ref_text = "उसके दोस्त, प्रेमिकाएँ, और रिश्तेदार, उसे इसी नाम से बुलाते थे, और वो भी, अक्सर समझ जाता था, कि क्वैं उसी को संबोधित है"
           speed = 0.94
 
           [voices.minister]
           ref_audio = "f5work/ref.wav"
-          ref_text = "अपने पीछे खड़े एक आदमी को इशारा किया तो वो आदमी खींचते हुए नवीन जोशी को वहां से बाहर ले गया । तब तक थप्पड़ की आवाज सुनकर कालिंदी और"
+          ref_text = "उसके दोस्त, प्रेमिकाएँ, और रिश्तेदार, उसे इसी नाम से बुलाते थे, और वो भी, अक्सर समझ जाता था, कि क्वैं उसी को संबोधित है"
           speed = 1.03
 
           [voices.earnest]
           ref_audio = "f5work/ref.wav"
-          ref_text = "अपने पीछे खड़े एक आदमी को इशारा किया तो वो आदमी खींचते हुए नवीन जोशी को वहां से बाहर ले गया । तब तक थप्पड़ की आवाज सुनकर कालिंदी और"
+          ref_text = "उसके दोस्त, प्रेमिकाएँ, और रिश्तेदार, उसे इसी नाम से बुलाते थे, और वो भी, अक्सर समझ जाता था, कि क्वैं उसी को संबोधित है"
           speed = 0.99
           TOML
 
@@ -135,7 +135,7 @@ jobs:
       - name: Shape three parody characters and assemble clean VO
         run: |
           python - <<'PY'
-          import os, glob, subprocess, re, shutil
+          import os, glob, subprocess, shutil
           import numpy as np
           import soundfile as sf
 
@@ -165,17 +165,14 @@ jobs:
               shape(src,dst,style)
               shaped.append(dst)
 
-          names=['statesman','minister','earnest']
-          for i,name in enumerate(names):
+          for i,name in enumerate(['statesman','minister','earnest']):
               shutil.copyfile(shaped[i],f'out/auditions/{name}_audition.wav')
 
-          # Assemble only the actual 20-line dialogue; auditions are excluded.
           pause_map={1:.26,2:.18,3:.24,4:.16,5:.20,6:.22,7:.18,8:.24,9:.18,10:.22,11:.16,12:.16,13:.18,14:.16,15:.22,16:.20,17:.18,18:.22,19:.16,20:0.0}
           pieces=[]; sr=48000
           for j,path in enumerate(shaped[3:],1):
               a,s=sf.read(path,dtype='float32')
               if a.ndim>1: a=a.mean(axis=1)
-              # trim excessive leading/trailing digital silence while preserving natural breath
               nz=np.flatnonzero(np.abs(a)>0.0022)
               if len(nz):
                   lo=max(0,nz[0]-int(.035*sr)); hi=min(len(a),nz[-1]+int(.055*sr)+1); a=a[lo:hi]
