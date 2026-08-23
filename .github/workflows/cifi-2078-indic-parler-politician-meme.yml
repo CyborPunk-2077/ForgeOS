@@ -1,0 +1,209 @@
+name: CI-FI 2078 F5 Hindi Politician Meme VO
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [cifi-2078-kokoro-hindi-20260823]
+    paths:
+      - '.github/workflows/cifi-2078-indic-parler-politician-meme.yml'
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Free disk
+        run: |
+          sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/dotnet || true
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          df -h
+
+      - name: Install F5 Hindi CPU stack
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.5.1 torchaudio==2.5.1
+          python -m pip install git+https://github.com/SWivid/F5-TTS.git
+          python -m pip uninstall -y torch torchaudio
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.5.1 torchaudio==2.5.1
+          f5-tts_infer-cli --help >/dev/null
+
+      - name: Download public Hindi model reference
+        run: |
+          mkdir -p f5work out
+          curl -L --fail --retry 3 -o f5work/ref.wav 'https://huggingface.co/SPRINGLab/F5-Hindi-24KHz/resolve/main/samples/output1.wav?download=true'
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 f5work/ref.wav
+
+      - name: Write Hindi-small model config and script
+        run: |
+          cat > f5work/hindi_small.yaml <<'YAML'
+          model:
+            name: F5TTS_Hindi_Small
+            tokenizer: custom
+            tokenizer_path: null
+            backbone: DiT
+            arch:
+              dim: 768
+              depth: 18
+              heads: 12
+              ff_mult: 2
+              text_dim: 512
+              text_mask_padding: false
+              conv_layers: 4
+              pe_attn_head: 1
+              attn_backend: torch
+              attn_mask_enabled: false
+              checkpoint_activations: false
+            mel_spec:
+              target_sample_rate: 24000
+              n_mel_channels: 100
+              hop_length: 256
+              win_length: 1024
+              n_fft: 1024
+              mel_spec_type: vocos
+            vocoder:
+              is_local: false
+              local_path: null
+          YAML
+
+          cat > f5work/story.toml <<'TOML'
+          model = "F5TTS_Hindi_Small"
+          model_cfg = "f5work/hindi_small.yaml"
+          ckpt_file = "hf://SPRINGLab/F5-Hindi-24KHz/model_2500000.safetensors"
+          vocab_file = "hf://SPRINGLab/F5-Hindi-24KHz/vocab.txt"
+          ref_audio = "f5work/ref.wav"
+          ref_text = "उसके दोस्त, प्रेमिकाएँ, और रिश्तेदार, उसे इसी नाम से बुलाते थे, और वो भी, अक्सर समझ जाता था, कि क्वैं उसी को संबोधित है"
+          gen_file = "f5work/dialogue.txt"
+          output_dir = "f5work/generated"
+          output_file = "raw_full.wav"
+          save_chunk = true
+          remove_silence = false
+          vocoder_name = "vocos"
+          speed = 1.0
+
+          [voices.statesman]
+          ref_audio = "f5work/ref.wav"
+          ref_text = "उसके दोस्त, प्रेमिकाएँ, और रिश्तेदार, उसे इसी नाम से बुलाते थे, और वो भी, अक्सर समझ जाता था, कि क्वैं उसी को संबोधित है"
+          speed = 0.94
+
+          [voices.minister]
+          ref_audio = "f5work/ref.wav"
+          ref_text = "उसके दोस्त, प्रेमिकाएँ, और रिश्तेदार, उसे इसी नाम से बुलाते थे, और वो भी, अक्सर समझ जाता था, कि क्वैं उसी को संबोधित है"
+          speed = 1.03
+
+          [voices.earnest]
+          ref_audio = "f5work/ref.wav"
+          ref_text = "उसके दोस्त, प्रेमिकाएँ, और रिश्तेदार, उसे इसी नाम से बुलाते थे, और वो भी, अक्सर समझ जाता था, कि क्वैं उसी को संबोधित है"
+          speed = 0.99
+          TOML
+
+          cat > f5work/dialogue.txt <<'TXT'
+          [statesman] प्राइवेसी चाहिए... और अभी भी क्रोम चला रहे हो? भाई, ये कैसे चलेगा?
+          [minister] प्राइवेसी चाहिए... और अभी भी क्रोम चला रहे हो? भाई, ये कैसे चलेगा?
+          [earnest] प्राइवेसी चाहिए... और अभी भी क्रोम चला रहे हो? भाई, ये कैसे चलेगा?
+          [earnest] भाई, ऑनलाइन प्राइवेसी शुरू करनी है... सबसे पहले क्या करूँ?
+          [statesman] क्रोम? अभी भी क्रोम?
+          [statesman] प्राइवेसी चाहते हो... और क्रोम चला रहे हो. ये कैसे चलेगा, भाई?
+          [minister] पहला काम—ब्राउज़र बदलो.
+          [minister] वीपीएन, एक्सटेंशन, टॉरेंट—सब बाद में.
+          [statesman] नींव गलत हो, तो ऊपर की इमारत टिकती नहीं.
+          [minister] फ़ायरफ़ॉक्स, लिब्रेवुल्फ़, या मुलवाड. कोई एक चुनो.
+          [statesman] बस. इतना ही.
+          [earnest] लिब्रेवुल्फ़ थोड़ा... ज़्यादा पैरानॉइड नहीं है?
+          [statesman] प्राइवेसी में थोड़ा पैरानॉइड होना बुरी बात नहीं है.
+          [minister] वीपीएन? प्रोटॉन. या मुलवाड.
+          [statesman] रैंडम फ्री वीपीएन मत उठा लेना.
+          [minister] फिर मत कहना बताया नहीं था.
+          [minister] यूब्लॉक ओरिजिन. ज़रूरी है.
+          [statesman] फ़ास्टफ़ॉरवर्ड डालो. बेकार रीडायरेक्ट कम होंगे.
+          [earnest] ठीक है... ये वाला समझ आया.
+          [minister] टॉरेंट के लिए क्यूबिटटॉरेंट. या ट्रांसमिशन.
+          [statesman] साफ. सीधा.
+          [earnest] और कोई अनजान फ़ाइल दिखे तो?
+          [minister] मत खोलना. बस.
+          TXT
+
+      - name: Render all Hindi takes in one model load
+        env:
+          HF_HUB_DISABLE_TELEMETRY: '1'
+        run: |
+          f5-tts_infer-cli -c f5work/story.toml --nfe_step 20 --cross_fade_duration 0.08
+          find f5work/generated -maxdepth 2 -type f -printf '%p\n' | sort
+
+      - name: Shape three parody characters and assemble clean VO
+        run: |
+          python - <<'PY'
+          import os, glob, subprocess, shutil
+          import numpy as np
+          import soundfile as sf
+
+          chunks = sorted(glob.glob('f5work/generated/*chunks/*.wav'))
+          if len(chunks) != 23:
+              print('chunk count:', len(chunks)); print('\n'.join(chunks))
+              raise RuntimeError('Expected 23 F5 chunks (3 auditions + 20 dialogue lines)')
+
+          styles = ['statesman','minister','earnest'] + [
+              'earnest','statesman','statesman','minister','minister','statesman','minister','statesman','earnest','statesman','minister','statesman','minister','minister','statesman','earnest','minister','statesman','earnest','minister'
+          ]
+          os.makedirs('out/auditions', exist_ok=True)
+          os.makedirs('out/segments', exist_ok=True)
+
+          def shape(src, dst, style):
+              if style == 'statesman':
+                  af = 'rubberband=pitch=0.91:tempo=0.98,highpass=f=48,bass=g=2.3:f=145,treble=g=-0.8:f=4200,acompressor=threshold=-22dB:ratio=1.35:attack=28:release=240,alimiter=limit=0.95'
+              elif style == 'minister':
+                  af = 'rubberband=pitch=0.98:tempo=1.03,highpass=f=62,equalizer=f=1050:t=q:w=1.1:g=1.1,equalizer=f=3400:t=q:w=1.0:g=0.7,acompressor=threshold=-21dB:ratio=1.25:attack=20:release=180,alimiter=limit=0.95'
+              else:
+                  af = 'rubberband=pitch=1.055:tempo=1.00,highpass=f=72,equalizer=f=2600:t=q:w=1.0:g=0.8,acompressor=threshold=-22dB:ratio=1.2:attack=24:release=210,alimiter=limit=0.95'
+              subprocess.run(['ffmpeg','-y','-i',src,'-af',af,'-ar','48000','-ac','1','-c:a','pcm_s16le',dst],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+
+          shaped=[]
+          for i,(src,style) in enumerate(zip(chunks,styles),1):
+              dst=f'out/segments/{i:02d}_{style}.wav'
+              shape(src,dst,style)
+              shaped.append(dst)
+
+          for i,name in enumerate(['statesman','minister','earnest']):
+              shutil.copyfile(shaped[i],f'out/auditions/{name}_audition.wav')
+
+          pause_map={1:.26,2:.18,3:.24,4:.16,5:.20,6:.22,7:.18,8:.24,9:.18,10:.22,11:.16,12:.16,13:.18,14:.16,15:.22,16:.20,17:.18,18:.22,19:.16,20:0.0}
+          pieces=[]; sr=48000
+          for j,path in enumerate(shaped[3:],1):
+              a,s=sf.read(path,dtype='float32')
+              if a.ndim>1: a=a.mean(axis=1)
+              nz=np.flatnonzero(np.abs(a)>0.0022)
+              if len(nz):
+                  lo=max(0,nz[0]-int(.035*sr)); hi=min(len(a),nz[-1]+int(.055*sr)+1); a=a[lo:hi]
+              n=min(int(.014*sr),max(1,len(a)//10))
+              if n>1:
+                  a[:n]*=np.linspace(0,1,n,dtype=np.float32)
+                  a[-n:]*=np.linspace(1,0,n,dtype=np.float32)
+              pieces.append(a)
+              p=pause_map[j]
+              if p: pieces.append(np.zeros(int(p*sr),dtype=np.float32))
+          full=np.concatenate(pieces)
+          peak=float(np.max(np.abs(full))) if len(full) else 1.0
+          if peak>0: full=full/max(1.0,peak/0.93)
+          sf.write('out/CI-FI_2078_Politician_Meme_Clean_VO_RAW.wav',full,sr)
+          print('RAW VO duration',len(full)/sr)
+          PY
+
+          ffmpeg -y -i out/CI-FI_2078_Politician_Meme_Clean_VO_RAW.wav \
+            -af 'highpass=f=48,acompressor=threshold=-20dB:ratio=1.18:attack=35:release=260,alimiter=limit=0.96,loudnorm=I=-16:TP=-1.5:LRA=14' \
+            -c:a aac -b:a 192k out/CI-FI_2078_Politician_Meme_Clean_VO.m4a
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 out/CI-FI_2078_Politician_Meme_Clean_VO.m4a
+
+          cat > out/README.txt <<'TXT'
+          Standalone Hindi meme VO only. NOT merged into video.
+          Three broad political-satire caricatures: statesman / blunt minister / earnest speaker.
+          No real politician voice samples or exact voice clones were used.
+          TXT
+
+      - name: Upload standalone VO package
+        uses: actions/upload-artifact@v4
+        with:
+          name: cifi-2078-f5-hindi-politician-meme-vo
+          path: out/
+          retention-days: 14

@@ -1,0 +1,139 @@
+name: CI-FI 2078 Chatterbox Hindi Meme VO
+
+on:
+  push:
+    branches:
+      - cifi-2078-kokoro-hindi-20260823
+    paths:
+      - '.github/workflows/cifi-2078-kokoro-hindi.yml'
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install expressive Hindi TTS stack
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg libsndfile1
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.6.0 torchaudio==2.6.0
+          python -m pip install chatterbox-tts soundfile numpy
+
+      - name: Download three generic Hindi male reference voices
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p refs
+          curl -L --retry 4 --retry-delay 2 -o refs/authoritative.mp3 'https://resource.heygen.ai/text_to_speech/rHCz2NDYdzFet8XCt7ARaP.mp3'
+          curl -L --retry 4 --retry-delay 2 -o refs/blunt.mp3 'https://resource.heygen.ai/text_to_speech/R8RkN387WyRsCrvumgoPYF.mp3'
+          curl -L --retry 4 --retry-delay 2 -o refs/earnest.mp3 'https://resource.heygen.ai/text_to_speech/bhDxGeZnTgZpBq8BUX3TuC.mp3'
+          ffprobe -v error refs/authoritative.mp3
+          ffprobe -v error refs/blunt.mp3
+          ffprobe -v error refs/earnest.mp3
+
+      - name: Generate fresh parody-style Hindi character performances
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p raw fitted final
+          cat > /tmp/render.py <<'PY'
+          import os, json, subprocess
+          import torch, torchaudio
+          from chatterbox.mtl_tts import ChatterboxMultilingualTTS
+
+          device='cpu'
+          model=ChatterboxMultilingualTTS.from_pretrained(device=device)
+
+          # Broad meme caricatures only: authoritative / blunt-desi / earnest-comic.
+          # They are deliberately generic and are not clones of any real politician.
+          segs=[
+            ('01',0.10,5.35,'देखिए... ऑनलाइन प्राइवेसी चाहिए, तो शुरुआत सही ब्राउज़र से कीजिए।','refs/authoritative.mp3',0.56,0.32),
+            ('02',5.75,13.10,'अरे भाई! क्रोम भी चलाना है और प्राइवेसी भी चाहिए? ये कैसा हिसाब है?','refs/blunt.mp3',0.86,0.25),
+            ('03',13.25,23.30,'पहले ब्राउज़र बदलो। फ़ायरफ़ॉक्स, लिब्रेवुल्फ़ या मुलवाड ब्राउज़र—कोई एक ठीक से सेट करो।','refs/authoritative.mp3',0.62,0.30),
+            ('04',24.00,30.60,'तो मैं बस वीपीएन लगा लूँ? फिर सब सुरक्षित हो जाएगा ना?','refs/earnest.mp3',0.72,0.28),
+            ('05',30.65,38.15,'नहीं महाराज! बेस ही गलत है तो ऊपर दस ताले लगाकर भी क्या फायदा?','refs/blunt.mp3',0.90,0.24),
+            ('06',38.85,46.75,'वीपीएन चाहिए तो प्रोटॉन या मुलवाड देखिए। कोई भी रैंडम फ्री वीपीएन मत उठाइए।','refs/authoritative.mp3',0.58,0.32),
+            ('07',47.55,57.70,'फिर यूब्लॉक ओरिजिन डालो, और फ़ास्टफ़ॉरवर्ड। बेकार के ऐड और रीडायरेक्ट—दोनों की छुट्टी।','refs/blunt.mp3',0.82,0.26),
+            ('08',57.80,63.45,'और टॉरेंट के लिए? वहाँ भी कोई खास जुगाड़ है क्या?','refs/earnest.mp3',0.70,0.30),
+            ('09',64.35,69.50,'क्यूबिटटॉरेंट या ट्रांसमिशन। और अनजान फ़ाइल दिखे... हीरो मत बनना, मत खोलना।','refs/authoritative.mp3',0.64,0.30),
+          ]
+
+          for name,start,end,text,ref,exag,cfg in segs:
+              wav=model.generate(
+                  text,
+                  language_id='hi',
+                  audio_prompt_path=ref,
+                  exaggeration=exag,
+                  cfg_weight=cfg,
+              )
+              torchaudio.save(f'raw/{name}.wav', wav.cpu(), model.sr)
+
+          measured=[]
+          for name,start,end,*rest in segs:
+              target=end-start
+              meta=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','json',f'raw/{name}.wav'],text=True))
+              dur=float(meta['format']['duration'])
+              usable=max(.7,target-.10)
+              ratio=dur/usable
+              measured.append((name,dur,target,ratio))
+          print('=== CHATTERBOX TIMING QA ===')
+          for row in measured:
+              print(row[0],'raw',round(row[1],3),'window',round(row[2],3),'tempo_needed',round(max(1.0,row[3]),3))
+
+          # We allow gentle fitting only. If a take is too long, preserve it instead of
+          # crushing the voice: trim only trailing silence, then cap at 1.16x.
+          for name,start,end,*rest in segs:
+              target=end-start
+              dur=next(x[1] for x in measured if x[0]==name)
+              ratio=dur/max(.7,target-.10)
+              tempo=min(max(ratio,1.0),1.16)
+              filt=['silenceremove=start_periods=1:start_silence=0.03:start_threshold=-48dB:stop_periods=-1:stop_silence=0.08:stop_threshold=-48dB','aresample=48000']
+              if tempo>1.003: filt.append(f'atempo={tempo:.6f}')
+              filt += [f'apad=pad_dur={target}',f'atrim=0:{target}','asetpts=PTS-STARTPTS']
+              subprocess.run(['ffmpeg','-y','-i',f'raw/{name}.wav','-af',','.join(filt),'-ac','1','-c:a','pcm_s16le',f'fitted/{name}.wav'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+
+          # Scene-synced standalone dub.
+          args=[]; chains=[]; labels=[]
+          for i,(name,start,end,*rest) in enumerate(segs):
+              args += ['-i',f'fitted/{name}.wav']
+              delay=round(start*1000); lab=f'a{i}'
+              chains.append(f'[{i}:a]adelay={delay}|{delay}[{lab}]')
+              labels.append(f'[{lab}]')
+          mix=''.join(labels)+f'amix=inputs={len(labels)}:normalize=0,alimiter=limit=0.96,loudnorm=I=-15:TP=-1.2:LRA=14,apad=pad_dur=69.612,atrim=0:69.612[out]'
+          subprocess.run(['ffmpeg','-y',*args,'-filter_complex',';'.join(chains+[mix]),'-map','[out]','-t','69.612','-c:a','aac','-b:a','192k','final/CI-FI_2078_Chatterbox_Meme_Hindi_SceneSynced.m4a'],check=True)
+
+          # Continuous audition: no long scene gaps, to judge acting/voice quality first.
+          with open('/tmp/concat.txt','w') as f:
+              for name,*_ in segs:
+                  f.write(f"file '{os.path.abspath(f'raw/{name}.wav')}'\n")
+          subprocess.run(['ffmpeg','-y','-f','concat','-safe','0','-i','/tmp/concat.txt','-af','aresample=48000,alimiter=limit=0.96,loudnorm=I=-15:TP=-1.2:LRA=14','-c:a','libmp3lame','-b:a','192k','final/CI-FI_2078_Chatterbox_Meme_Hindi_Audition.mp3'],check=True)
+
+          # Individual character reels for quick comparison.
+          groups={
+            'Authoritative':['01','03','06','09'],
+            'BluntDesi':['02','05','07'],
+            'EarnestComic':['04','08'],
+          }
+          for label,names in groups.items():
+              with open('/tmp/g.txt','w') as f:
+                  for n in names: f.write(f"file '{os.path.abspath(f'raw/{n}.wav')}'\n")
+              subprocess.run(['ffmpeg','-y','-f','concat','-safe','0','-i','/tmp/g.txt','-af','aresample=48000,loudnorm=I=-15:TP=-1.2:LRA=14','-c:a','libmp3lame','-b:a','192k',f'final/{label}.mp3'],check=True)
+          PY
+          python /tmp/render.py
+          ls -lh final/
+
+      - name: Upload standalone Hindi VO package
+        uses: actions/upload-artifact@v4
+        with:
+          name: cifi-2078-chatterbox-meme-hindi-vo
+          path: final/*
+          if-no-files-found: error
+          compression-level: 6
