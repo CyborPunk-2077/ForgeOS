@@ -1,0 +1,56 @@
+name: SangodX Natural Hindi VO
+
+on:
+  push:
+    branches: [cifi-2078-kokoro-hindi-20260823]
+    paths:
+      - '.github/workflows/sangodx-hindi-vo.yml'
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Install TTS stack
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install -U edge-tts
+
+      - name: Render scene-wise Hindi narration
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p raw final
+
+          edge-tts --voice hi-IN-MadhurNeural --rate=+7% --pitch=-2Hz --text 'भाई ने सोचा था, आज बस एक सीधा सा काम है। गाड़ी उठानी है, निकलना है, और दिन शांति से काटना है। लेकिन GTA में अगर तुम ये सोच लो कि आज कुछ नहीं होगा... तो समझ लो खेल तुम्हारे खिलाफ प्लान बना चुका है।' --write-media raw/01.mp3
+          edge-tts --voice hi-IN-MadhurNeural --rate=+10% --pitch=-1Hz --text 'पहले तो सब नॉर्मल दिख रहा था। गाड़ी निकली, रास्ता साफ, और बंदा पूरे कॉन्फिडेंस में। फिर सामने पेट्रोल पंप दिखा... और यहीं से कहानी ने धीरे-धीरे अपना रंग दिखाना शुरू किया।' --write-media raw/02.mp3
+          edge-tts --voice hi-IN-MadhurNeural --rate=+8% --pitch=-2Hz --text 'अब देखो, गाड़ी लगाई ऐसे जैसे रोज़ का काम हो। सामने पिकअप खड़ी है, आस-पास लोग हैं, और हमारा भाई बिल्कुल ऐसे घूम रहा है जैसे इस पूरे पेट्रोल पंप की रजिस्ट्री उसी के नाम हो।' --write-media raw/03.mp3
+          edge-tts --voice hi-IN-MadhurNeural --rate=+6% --pitch=-3Hz --text 'लेकिन फिर बात शुरू होती है। पहले दो लाइनें नॉर्मल... फिर टोन बदलती है। सामने वाला भी पीछे हटने वालों में से नहीं, और हमारा बंदा भी आज समझौते के मूड में नहीं है।' --write-media raw/04.mp3
+          edge-tts --voice hi-IN-MadhurNeural --rate=+12% --pitch=-1Hz --text 'अब यहाँ से माहौल थोड़ा गर्म हो गया। गाड़ी किसकी, रास्ता किसका, कौन किसको क्या बोलेगा... मुद्दा कुछ भी हो, ईगो दोनों तरफ फुल टैंक है। और जब ईगो फुल टैंक हो, दिमाग अक्सर रिज़र्व में चला जाता है।' --write-media raw/05.mp3
+          edge-tts --voice hi-IN-MadhurNeural --rate=+11% --pitch=-1Hz --text 'फिर भाई ने सोचा, बातचीत बहुत हो गई... अब निकलते हैं। पिकअप हाथ में आई और ऐसे रवाना हुआ जैसे मिशन पूरा हो चुका हो। बस एक दिक्कत थी—गेम अभी खत्म नहीं हुआ था।' --write-media raw/06.mp3
+          edge-tts --voice hi-IN-MadhurNeural --rate=+13% --pitch=+0Hz --text 'अब स्पीड बढ़ी, कॉन्फिडेंस और बढ़ा, और यही वो कॉम्बिनेशन है जहाँ GTA तुम्हें बहुत जल्दी याद दिलाता है कि सड़क तुम्हारे बाप की नहीं है। एक सेकंड सब कंट्रोल में... अगले सेकंड पूरा सीन उल्टा।' --write-media raw/07.mp3
+          edge-tts --voice hi-IN-MadhurNeural --rate=+5% --pitch=-3Hz --text 'और फिर... कट। बाहर का ड्रामा खत्म, अब नया सीन अंदर। आदमी बच गया, लेकिन मूड बिल्कुल नहीं। सामने फिर लोग, फिर बहस, और इस बार जगह ऐसी कि पीछे हटने की भी जगह नहीं।' --write-media raw/08.mp3
+          edge-tts --voice hi-IN-MadhurNeural --rate=+9% --pitch=-2Hz --text 'अब यहाँ बातचीत से ज़्यादा बॉडी लैंग्वेज बोल रही है। कोई किसी को रास्ता नहीं दे रहा, कोई शांत नहीं हो रहा... और दो मिनट पहले जो सिर्फ गाड़ी का चक्कर था, वो अब पूरा पर्सनल मामला बन चुका है।' --write-media raw/09.mp3
+          edge-tts --voice hi-IN-MadhurNeural --rate=+8% --pitch=-2Hz --text 'यही GTA का मज़ा है। तुम निकलते हो एक छोटे से काम के लिए, और पाँच मिनट बाद कहानी ऐसी बन जाती है जैसे पूरी गैंग की इज़्ज़त दाँव पर लगी हो। प्लान कुछ और था... कंटेंट अपने आप बन गया।' --write-media raw/10.mp3
+
+          printf "file '%s'\n" "$PWD/raw/01.mp3" > /tmp/list.txt
+          for i in 02 03 04 05 06 07 08 09 10; do
+            ffmpeg -y -f lavfi -i anullsrc=r=48000:cl=mono -t 0.45 -q:a 9 -acodec libmp3lame raw/pause_${i}.mp3
+            printf "file '%s'\n" "$PWD/raw/pause_${i}.mp3" >> /tmp/list.txt
+            printf "file '%s'\n" "$PWD/raw/${i}.mp3" >> /tmp/list.txt
+          done
+
+          ffmpeg -y -f concat -safe 0 -i /tmp/list.txt \
+            -af 'aresample=48000,highpass=f=65,acompressor=threshold=-19dB:ratio=1.35:attack=18:release=180,alimiter=limit=0.96,loudnorm=I=-15:TP=-1.2:LRA=12' \
+            -c:a aac -b:a 192k final/SangodX_Natural_Hindi_VO.m4a
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/SangodX_Natural_Hindi_VO.m4a
+
+      - name: Upload VO
+        uses: actions/upload-artifact@v4
+        with:
+          name: sangodx-natural-hindi-vo
+          path: final/SangodX_Natural_Hindi_VO.m4a
+          if-no-files-found: error
+          retention-days: 7
