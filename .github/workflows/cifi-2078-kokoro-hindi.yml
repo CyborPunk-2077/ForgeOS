@@ -35,9 +35,6 @@ jobs:
           from kokoro import KPipeline
 
           pipeline = KPipeline(lang_code='h')
-
-          # Entirely fresh dialogue. Short phrases are intentional: acting should breathe,
-          # never be crushed to fit the original character beats.
           segs = [
               ('01',0.016,5.440,'ऑनलाइन प्राइवेसी शुरू करनी है... पहले क्या करूँ?','hm_omega',0.96),
               ('02',5.872,8.000,'क्रोम?! अभी भी?','hm_psi',1.02),
@@ -58,29 +55,21 @@ jobs:
               ('17',57.920,61.776,'क्यूबिटटॉरेंट. या ट्रांसमिशन.','hm_psi',1.02),
               ('18',61.808,63.552,'साफ. सीधा.','hm_psi',0.92),
               ('19',64.480,66.976,'अनजान फ़ाइल?','hm_psi',0.90),
-              ('20',67.776,69.600,'मत खोल. बस.','hm_psi',0.88),
+              ('20',67.776,69.600,'मत खोल.','hm_psi',0.88),
           ]
 
-          # Render every take first.
           for name,start,end,text,voice,speed in segs:
               chunks=[audio for _,_,audio in pipeline(text, voice=voice, speed=speed, split_pattern=r'\n+')]
-              if not chunks:
-                  raise RuntimeError(f'No audio generated for {name}')
+              if not chunks: raise RuntimeError(f'No audio generated for {name}')
               sf.write(f'raw/{name}.wav', np.concatenate(chunks), 24000)
 
-          # Measure ALL lines before failing, so one run exposes every offender.
-          measured=[]
-          offenders=[]
+          measured=[]; offenders=[]
           for name,start,end,text,voice,speed in segs:
               target=end-start
-              meta=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','json',f'raw/{name}.wav'], text=True))
-              dur=float(meta['format']['duration'])
-              usable=max(.45,target-.06)
-              ratio=dur/usable
+              meta=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','json',f'raw/{name}.wav'],text=True))
+              dur=float(meta['format']['duration']); usable=max(.45,target-.06); ratio=dur/usable
               measured.append((name,dur,target,ratio))
-              if ratio > 1.20:
-                  offenders.append((name,dur,target,ratio))
-
+              if ratio>1.20: offenders.append((name,dur,target,ratio))
           print('=== KOKORO TIMING QA ===')
           for name,dur,target,ratio in measured:
               print(name,'raw',round(dur,3),'window',round(target,3),'tempo_needed',round(max(1.0,ratio),3))
@@ -89,37 +78,29 @@ jobs:
               for x in offenders: print(x)
               raise RuntimeError('Dialogue timing QA failed; shorten listed lines')
 
-          # Gentle fit only after all lines pass.
           for name,start,end,text,voice,speed in segs:
-              target=end-start
-              row=next(x for x in measured if x[0]==name)
-              ratio=row[3]
+              target=end-start; ratio=next(x for x in measured if x[0]==name)[3]
               filt=['aresample=48000']
-              if ratio > 1.003:
-                  filt.append(f'atempo={ratio:.6f}')
-              if name=='01':
-                  filt += ['highpass=f=48','equalizer=f=155:t=q:w=1.0:g=1.5','equalizer=f=3200:t=q:w=1.0:g=-0.8']
-              else:
-                  filt += ['highpass=f=62','equalizer=f=250:t=q:w=1.0:g=0.5','equalizer=f=3100:t=q:w=1.0:g=0.8']
+              if ratio>1.003: filt.append(f'atempo={ratio:.6f}')
+              if name=='01': filt += ['highpass=f=48','equalizer=f=155:t=q:w=1.0:g=1.5','equalizer=f=3200:t=q:w=1.0:g=-0.8']
+              else: filt += ['highpass=f=62','equalizer=f=250:t=q:w=1.0:g=0.5','equalizer=f=3100:t=q:w=1.0:g=0.8']
               filt += [f'apad=pad_dur={target}',f'atrim=0:{target}','asetpts=PTS-STARTPTS']
               subprocess.run(['ffmpeg','-y','-i',f'raw/{name}.wav','-af',','.join(filt),'-ac','1','-c:a','pcm_s16le',f'fitted/{name}.wav'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 
           args=[]; chains=[]; labels=[]
           for idx,(name,start,end,*_) in enumerate(segs):
-              args += ['-i',f'fitted/{name}.wav']
-              d=round(start*1000); lab=f'a{idx}'
-              chains.append(f'[{idx}:a]adelay={d}|{d}[{lab}]')
-              labels.append(f'[{lab}]')
+              args += ['-i',f'fitted/{name}.wav']; d=round(start*1000); lab=f'a{idx}'
+              chains.append(f'[{idx}:a]adelay={d}|{d}[{lab}]'); labels.append(f'[{lab}]')
           mix=''.join(labels)+f'amix=inputs={len(labels)}:normalize=0,acompressor=threshold=-20dB:ratio=1.08:attack=40:release=380,alimiter=limit=0.97,loudnorm=I=-16:TP=-1.5:LRA=17,apad=pad_dur=69.612,atrim=0:69.612[out]'
-          subprocess.run(['ffmpeg','-y',*args,'-filter_complex',';'.join(chains+[mix]),'-map','[out]','-t','69.612','-c:a','aac','-b:a','192k','final/CI-FI_2078_Kokoro_Character_Hindi_V3.m4a'],check=True)
+          subprocess.run(['ffmpeg','-y',*args,'-filter_complex',';'.join(chains+[mix]),'-map','[out]','-t','69.612','-c:a','aac','-b:a','192k','final/CI-FI_2078_Kokoro_Character_Hindi_Final.m4a'],check=True)
           PY
           python /tmp/render.py
-          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/CI-FI_2078_Kokoro_Character_Hindi_V3.m4a
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/CI-FI_2078_Kokoro_Character_Hindi_Final.m4a
 
       - name: Upload fresh narration
         uses: actions/upload-artifact@v4
         with:
-          name: cifi-2078-kokoro-character-hindi-v3
-          path: final/CI-FI_2078_Kokoro_Character_Hindi_V3.m4a
+          name: cifi-2078-kokoro-character-hindi-final
+          path: final/CI-FI_2078_Kokoro_Character_Hindi_Final.m4a
           if-no-files-found: error
           compression-level: 6
