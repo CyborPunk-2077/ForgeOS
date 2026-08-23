@@ -3,7 +3,7 @@ name: CI-FI 2078 Indic Parler Politician Meme VO
 on:
   pull_request:
     branches:
-      - main
+      - master
   push:
     branches:
       - cifi-2078-kokoro-hindi-20260823
