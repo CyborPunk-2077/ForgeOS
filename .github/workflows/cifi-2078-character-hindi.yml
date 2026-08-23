@@ -24,19 +24,17 @@ jobs:
           python - <<'PY'
           import asyncio, edge_tts
           segments = [
-            # Older/stern character: deliberately slower, lower profile, different Indian male voice.
-            ('01', 5.800, 'Online privacy chahiye? Toh sabse zaroori tools kaun se hain... aur shuruaat kahan se karun?', 'en-IN-PrabhatNeural', '-8%', '-8Hz'),
-            # Pirate/guide character: native Hindi male, sharper and more animated.
+            ('01', 5.800, 'Privacy chahiye? Essential tools kaun se hain... shuruaat kahan se karun?', 'en-IN-PrabhatNeural', '-8%', '-8Hz'),
             ('02', 7.000, 'वॉल्टर, पहली गलती—क्रोम! प्राइवेसी की बात करनी है तो पहले ब्राउज़र बदल।', 'hi-IN-MadhurNeural', '+5%', '+4Hz'),
             ('03', 10.800, 'वीपीएन, एक्सटेंशन्स, टॉरेंट क्लाइंट, एंटीवायरस—सब आएँगे। लेकिन बेस गड़बड़ हुआ, तो बाकी सब बेकार।', 'hi-IN-MadhurNeural', '+6%', '+2Hz'),
             ('04', 6.900, 'ब्राउज़र में फ़ायरफ़ॉक्स, लिब्रेवुल्फ़ या मुलवाड ब्राउज़र। तीनों में से कोई एक।', 'hi-IN-MadhurNeural', '+4%', '+1Hz'),
-            ('05', 4.700, 'लिब्रेवुल्फ़ खास तौर पर प्राइवेसी और सिक्योरिटी के लिए हार्डन्ड है।', 'hi-IN-MadhurNeural', '-1%', '-1Hz'),
-            ('06', 5.400, 'वीपीएन? प्रोटॉन या मुलवाड। सिंपल—दोनों मजबूत विकल्प।', 'hi-IN-MadhurNeural', '+5%', '+3Hz'),
-            ('07', 7.200, 'प्रोटॉन स्विट्ज़रलैंड बेस्ड और ओपन-सोर्स है। मुलवाड स्वीडन बेस्ड है, और साइन-अप भी मिनिमल।', 'hi-IN-MadhurNeural', '+1%', '-1Hz'),
-            ('08', 6.900, 'ब्राउज़र पर यूब्लॉक ओरिजिन ज़रूर। और फ़ास्टफ़ॉरवर्ड जैसे टूल बेकार रीडायरेक्ट्स कम करते हैं।', 'hi-IN-MadhurNeural', '+6%', '+2Hz'),
-            ('09', 4.800, 'छोटे टूल हैं... पर ब्राउज़िंग का झंझट काफी कम कर देते हैं।', 'hi-IN-MadhurNeural', '+1%', '+0Hz'),
+            ('05', 4.700, 'लिब्रेवुल्फ़ प्राइवेसी और सिक्योरिटी के लिए हार्डन्ड है।', 'hi-IN-MadhurNeural', '-1%', '-1Hz'),
+            ('06', 5.400, 'वीपीएन? प्रोटॉन या मुलवाड—दोनों मजबूत।', 'hi-IN-MadhurNeural', '+5%', '+3Hz'),
+            ('07', 7.200, 'प्रोटॉन स्विट्ज़रलैंड बेस्ड और ओपन-सोर्स है। मुलवाड स्वीडन बेस्ड, साइन-अप भी मिनिमल।', 'hi-IN-MadhurNeural', '+1%', '-1Hz'),
+            ('08', 6.900, 'ब्राउज़र पर यूब्लॉक ओरिजिन ज़रूर। फ़ास्टफ़ॉरवर्ड जैसे टूल बेकार रीडायरेक्ट्स कम करते हैं।', 'hi-IN-MadhurNeural', '+6%', '+2Hz'),
+            ('09', 4.800, 'छोटे टूल... बड़ा फर्क।', 'hi-IN-MadhurNeural', '-2%', '+0Hz'),
             ('10', 6.200, 'टॉरेंट क्लाइंट में क्यूबिटटॉरेंट या ट्रांसमिशन—क्लीन, सीधा, बिना फालतू बकवास।', 'hi-IN-MadhurNeural', '+5%', '+2Hz'),
-            ('11', 3.912, 'बस। सेफ रहो... और अनजान फ़ाइल पर आँख बंद करके भरोसा मत करना।', 'hi-IN-MadhurNeural', '-3%', '-3Hz'),
+            ('11', 3.912, 'बस... सेफ रहो। अनजान फ़ाइल पर भरोसा मत करना।', 'hi-IN-MadhurNeural', '+1%', '-3Hz'),
           ]
           async def main():
               for name, target, text, voice, rate, pitch in segments:
@@ -59,17 +57,14 @@ jobs:
               usable=max(0.8,target-0.10)
               ratio=dur/usable
               filters=['aresample=48000']
-              # Only compress timing when necessary; keep dramatic pauses if line is already shorter.
               if ratio > 1.003:
                   r=ratio
                   while r > 2.0:
                       filters.append('atempo=2.0'); r/=2.0
                   filters.append(f'atempo={r:.6f}')
               if i == 1:
-                  # Darker, heavier presence for the stern opening character.
                   filters += ['highpass=f=55','equalizer=f=180:t=q:w=1.0:g=4','equalizer=f=3200:t=q:w=1.2:g=-1.5']
               else:
-                  # Crisper, more animated guide character without flattening dynamics.
                   filters += ['highpass=f=70','equalizer=f=2600:t=q:w=1.1:g=1.5']
               filters += [f'apad=pad_dur={target}',f'atrim=0:{target}','asetpts=PTS-STARTPTS']
               subprocess.run(['ffmpeg','-y','-i',f'raw/{name}.mp3','-af',','.join(filters),'-ac','1','-c:a','pcm_s16le',f'fitted/{name}.wav'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
