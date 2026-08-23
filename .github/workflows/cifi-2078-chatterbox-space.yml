@@ -33,7 +33,6 @@ jobs:
           import os, shutil, subprocess
           from gradio_client import Client, handle_file
 
-          # This duplicate is currently Running without the official ZeroGPU queue.
           client = Client('rahul7star/Chatterbox-Multilingual-TTS')
 
           segs = [
@@ -51,6 +50,8 @@ jobs:
           def gen(name,text,ref,exag,temp,seed):
               result=client.predict(
                   text_input=text,
+                  lyrics_input='',
+                  mode='Speak 🗣️',
                   language_id='hi',
                   audio_prompt_path_input=handle_file(ref),
                   exaggeration_input=exag,
