@@ -27,12 +27,12 @@ jobs:
           segments = [
             ('01', 9.5, 'गूगल का ये नया फीचर देखो—अब तुम कपड़े वर्चुअली ट्राय-ऑन कर सकते हो। नया ए-आई ऐसा मॉडल चुनता है जो तुम्हारी बॉडी और लुक के काफी क्लोज़ हो।'),
             ('02', 5.0, 'रेफरेंस मॉडल अलग-अलग साइज़ में हैं—छोटे साइज़ से लेकर फोर एक्स-एल तक।'),
-            ('03', 5.0, 'स्किन टोन, बॉडी शेप और बॉडी टाइप भी अलग-अलग मिलते हैं, ताकि रिज़ल्ट ज़्यादा रियलिस्टिक लगे।'),
-            ('04', 5.0, 'पीछे एक डिफ्यूज़न-बेस्ड न्यूरल मॉडल कपड़े की इमेज और पर्सन की फोटो को कॉम्बाइन करता है।'),
-            ('05', 4.5, 'बस गारमेंट की फोटो दो, और जिस पर्सन पर ट्राय करना है उसकी इमेज सिलेक्ट करो।'),
-            ('06', 4.8, 'फिर ए-आई कपड़े को बॉडी की सही पोज़िशन और फिट में जनरेट करता है।'),
-            ('07', 4.4, 'फोल्ड्स, क्रीज़ और शैडोज़ तक बनते हैं, इसलिए कपड़ा बॉडी पर नैचुरल लगता है।'),
-            ('08', 3.224376, 'रिज़ल्ट काफी रियल लगता है। ऐसे ए-आई अपडेट्स के लिए फॉलो करो।'),
+            ('03', 5.0, 'स्किन टोन और बॉडी शेप के भी कई ऑप्शन्स मिलते हैं, ताकि मैच नैचुरल लगे।'),
+            ('04', 5.3, 'पीछे डिफ्यूज़न-बेस्ड न्यूरल मॉडल कपड़े और पर्सन की फोटो को कॉम्बाइन करता है।'),
+            ('05', 3.7, 'गारमेंट की फोटो और पर्सन की इमेज सिलेक्ट करो—बस।'),
+            ('06', 5.0, 'फिर ए-आई कपड़े को बॉडी की सही पोज़िशन और फिट में जनरेट करता है।'),
+            ('07', 5.5, 'फोल्ड्स, क्रीज़ और शैडोज़ तक बनते हैं, इसलिए फिट काफी नैचुरल दिखाई देता है।'),
+            ('08', 2.424376, 'ऐसे ए-आई अपडेट्स के लिए फॉलो करो।'),
           ]
 
           async def main():
@@ -49,17 +49,15 @@ jobs:
           set -euxo pipefail
           python - <<'PY'
           import subprocess, json
-          targets=[9.5,5.0,5.0,5.0,4.5,4.8,4.4,3.224376]
+          targets=[9.5,5.0,5.0,5.3,3.7,5.0,5.5,2.424376]
           for i,target in enumerate(targets,1):
               name=f'{i:02d}'
               p=subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','json',f'raw/{name}.mp3'],text=True)
               dur=float(json.loads(p)['format']['duration'])
-              usable=max(0.8,target-0.18)
+              usable=max(0.8,target-0.15)
               ratio=dur/usable
               filters=['aresample=48000']
-              # Only accelerate if needed; otherwise preserve the natural cadence and pad the tail.
               if ratio > 1.005:
-                  # Chain atempo if required, though scripts are written to remain close to target.
                   r=ratio
                   while r > 2.0:
                       filters.append('atempo=2.0'); r/=2.0
@@ -73,7 +71,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          for i in $(seq -w 1 8); do echo "file '../fitted/${i}.wav'"; done > final/list.txt
+          for i in 01 02 03 04 05 06 07 08; do echo "file '../fitted/${i}.wav'"; done > final/list.txt
           ffmpeg -y -f concat -safe 0 -i final/list.txt \
             -af "highpass=f=65,acompressor=threshold=-18dB:ratio=2:attack=10:release=120,alimiter=limit=0.95,loudnorm=I=-16:TP=-1.5:LRA=7" \
             -t 41.424376 -c:a aac -b:a 160k final/CI-FI_2041_Scene_Synced_Hindi_VO.m4a
