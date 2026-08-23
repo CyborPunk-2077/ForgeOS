@@ -1,0 +1,83 @@
+name: CI-FI 2079 Emotional Hindi VO
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/cifi-2079-emotional-hindi.yml'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install --quiet edge-tts
+
+      - name: Generate expressive Hindi segments
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p raw fitted final
+          python - <<'PY'
+          import asyncio, edge_tts
+          segments = [
+            ('01', 4.2, 'ये देखो... नॉर्मल वीडियो, और कुछ सेकंड में पूरा लुक बदल गया।', '+2%', '+1Hz'),
+            ('02', 3.4, 'यही है ग्लैम ए-आई—वीडियो ट्रांसफॉर्म करने वाला टूल।', '+3%', '0Hz'),
+            ('03', 4.2, 'बस वीडियो डालो, और कोई ट्रेंडिंग फ़िल्टर चुन लो।', '+4%', '+1Hz'),
+            ('04', 4.2, 'एक टैप में कैरेक्टर, स्टाइल... यहाँ तक कि एलन मस्क वाला लुक भी!', '+6%', '+2Hz'),
+            ('05', 4.4, 'और ये सिर्फ चेहरा नहीं—पूरी वीडियो की फील बदल देता है।', '+1%', '-1Hz'),
+            ('06', 4.3, 'सबसे अच्छी बात? एडिटिंग स्किल्स की ज़रूरत ही नहीं।', '+2%', '+1Hz'),
+            ('07', 4.0, 'ए-आई पावर्ड टेम्पलेट्स रेडी मिलते हैं—अपनी क्लिप डालो, बस।', '+4%', '+1Hz'),
+            ('08', 4.0, 'टेम्पलेट्स लगातार अपडेट होते हैं, तो नया ट्रेंड पकड़ना आसान है।', '+3%', '0Hz'),
+            ('09', 4.591, 'कंटेंट बनाते हो तो एक बार ट्राय ज़रूर करना... रिज़ल्ट सच में कमाल के हैं।', '+3%', '+2Hz'),
+          ]
+          async def main():
+              for name, target, text, rate, pitch in segments:
+                  tts = edge_tts.Communicate(text, 'hi-IN-MadhurNeural', rate=rate, pitch=pitch)
+                  await tts.save(f'raw/{name}.mp3')
+          asyncio.run(main())
+          PY
+
+      - name: Fit to scene windows
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python - <<'PY'
+          import subprocess, json
+          targets=[4.2,3.4,4.2,4.2,4.4,4.3,4.0,4.0,4.591]
+          for i,target in enumerate(targets,1):
+              name=f'{i:02d}'
+              p=subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','json',f'raw/{name}.mp3'],text=True)
+              dur=float(json.loads(p)['format']['duration'])
+              usable=max(0.8,target-0.10)
+              ratio=dur/usable
+              filters=['aresample=48000']
+              if ratio > 1.003:
+                  r=ratio
+                  while r > 2.0:
+                      filters.append('atempo=2.0'); r/=2.0
+                  filters.append(f'atempo={r:.6f}')
+              filters += [f'apad=pad_dur={target}',f'atrim=0:{target}','asetpts=PTS-STARTPTS']
+              subprocess.run(['ffmpeg','-y','-i',f'raw/{name}.mp3','-af',','.join(filters),'-ac','1','-c:a','pcm_s16le',f'fitted/{name}.wav'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+              print(name,'raw=',round(dur,3),'target=',round(target,3),'tempo=',round(max(1.0,ratio),3))
+          PY
+
+      - name: Assemble and master VO
+        shell: bash
+        run: |
+          set -euxo pipefail
+          printf "file '../fitted/01.wav'\nfile '../fitted/02.wav'\nfile '../fitted/03.wav'\nfile '../fitted/04.wav'\nfile '../fitted/05.wav'\nfile '../fitted/06.wav'\nfile '../fitted/07.wav'\nfile '../fitted/08.wav'\nfile '../fitted/09.wav'\n" > final/list.txt
+          ffmpeg -y -f concat -safe 0 -i final/list.txt \
+            -af "highpass=f=65,acompressor=threshold=-20dB:ratio=2.2:attack=8:release=110,alimiter=limit=0.95,loudnorm=I=-16:TP=-1.5:LRA=8" \
+            -t 37.291 -c:a aac -b:a 160k final/CI-FI_2079_Emotional_Hindi_VO.m4a
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/CI-FI_2079_Emotional_Hindi_VO.m4a
+
+      - name: Upload narration
+        uses: actions/upload-artifact@v4
+        with:
+          name: cifi-2079-emotional-hindi-vo
+          path: final/CI-FI_2079_Emotional_Hindi_VO.m4a
+          if-no-files-found: error
