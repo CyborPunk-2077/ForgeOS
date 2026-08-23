@@ -1,6 +1,8 @@
 name: CI-FI 2078 Chatterbox Space Meme VO
 
 on:
+  pull_request:
+    branches: [master]
   push:
     branches: [cifi-2078-kokoro-hindi-20260823]
     paths:
@@ -28,7 +30,7 @@ jobs:
           curl -L --retry 3 -o refs/earnest.mp3 'https://resource.heygen.ai/text_to_speech/bhDxGeZnTgZpBq8BUX3TuC.mp3'
 
           cat > /tmp/gen.py <<'PY'
-          import os, shutil, subprocess, json
+          import os, shutil, subprocess
           from gradio_client import Client, handle_file
 
           client = Client('ResembleAI/Chatterbox-Multilingual-TTS')
@@ -37,7 +39,6 @@ jobs:
           except Exception as e:
               print('view_api warning:', e)
 
-          # 9 complete acting beats; deliberately not micro-chopped.
           segs = [
             ('01','देखिए... ऑनलाइन प्राइवेसी चाहिए, तो शुरुआत सही ब्राउज़र से कीजिए।','refs/authoritative.mp3',0.62,0.72,1101),
             ('02','अरे भाई! क्रोम भी चलाना है और प्राइवेसी भी चाहिए? ये कैसा हिसाब है?','refs/blunt.mp3',0.92,0.76,2202),
@@ -65,7 +66,6 @@ jobs:
                   try:
                       result=client.predict(**kwargs, api_name=api_name)
                       print(name,'api',api_name,'result',result)
-                      # Gradio Audio output is normally a file path string or dict.
                       path=result
                       if isinstance(result, dict):
                           path=result.get('path') or result.get('name') or result.get('url')
@@ -81,13 +81,11 @@ jobs:
 
           for s in segs: gen(*s)
 
-          # Continuous audition — best file to judge acting/voice quality before video merge.
           with open('/tmp/concat.txt','w') as f:
               for name,*_ in segs:
                   f.write(f"file '{os.path.abspath('raw/'+name+'.wav')}'\n")
           subprocess.run(['ffmpeg','-y','-f','concat','-safe','0','-i','/tmp/concat.txt','-af','aresample=48000,highpass=f=50,alimiter=limit=0.96,loudnorm=I=-15:TP=-1.2:LRA=14','-c:a','libmp3lame','-b:a','192k','final/CI-FI_2078_Politician_Parody_VO_AUDITION.mp3'],check=True)
 
-          # Character-only reels.
           groups={'Authoritative':['01','03','06','09'],'BluntDesi':['02','05','07'],'EarnestComic':['04','08']}
           for label,names in groups.items():
               with open('/tmp/group.txt','w') as f:
