@@ -16,74 +16,97 @@ jobs:
           sudo apt-get install -y -qq ffmpeg
           python -m pip install --quiet edge-tts
 
-      - name: Generate character performances
+      - name: Generate micro-beat character performances
         shell: bash
         run: |
           set -euxo pipefail
           mkdir -p raw fitted final
           python - <<'PY'
           import asyncio, edge_tts
-          segments = [
-            ('01', 5.800, 'Privacy chahiye? Essential tools kaun se hain... shuruaat kahan se karun?', 'en-IN-PrabhatNeural', '-8%', '-8Hz'),
-            ('02', 7.000, 'वॉल्टर, पहली गलती—क्रोम! प्राइवेसी की बात करनी है तो पहले ब्राउज़र बदल।', 'hi-IN-MadhurNeural', '+5%', '+4Hz'),
-            ('03', 10.800, 'वीपीएन, एक्सटेंशन्स, टॉरेंट क्लाइंट, एंटीवायरस—सब आएँगे। लेकिन बेस गड़बड़ हुआ, तो बाकी सब बेकार।', 'hi-IN-MadhurNeural', '+6%', '+2Hz'),
-            ('04', 6.900, 'ब्राउज़र में फ़ायरफ़ॉक्स, लिब्रेवुल्फ़ या मुलवाड ब्राउज़र। तीनों में से कोई एक।', 'hi-IN-MadhurNeural', '+4%', '+1Hz'),
-            ('05', 4.700, 'लिब्रेवुल्फ़ प्राइवेसी और सिक्योरिटी के लिए हार्डन्ड है।', 'hi-IN-MadhurNeural', '-1%', '-1Hz'),
-            ('06', 5.400, 'वीपीएन? प्रोटॉन या मुलवाड—दोनों मजबूत।', 'hi-IN-MadhurNeural', '+5%', '+3Hz'),
-            ('07', 7.200, 'प्रोटॉन स्विट्ज़रलैंड बेस्ड और ओपन-सोर्स है। मुलवाड स्वीडन बेस्ड, साइन-अप भी मिनिमल।', 'hi-IN-MadhurNeural', '+1%', '-1Hz'),
-            ('08', 6.900, 'ब्राउज़र पर यूब्लॉक ओरिजिन ज़रूर। फ़ास्टफ़ॉरवर्ड जैसे टूल बेकार रीडायरेक्ट्स कम करते हैं।', 'hi-IN-MadhurNeural', '+6%', '+2Hz'),
-            ('09', 4.800, 'छोटे टूल... बड़ा फर्क।', 'hi-IN-MadhurNeural', '-2%', '+0Hz'),
-            ('10', 6.200, 'टॉरेंट क्लाइंट में क्यूबिटटॉरेंट या ट्रांसमिशन—क्लीन, सीधा, बिना फालतू बकवास।', 'hi-IN-MadhurNeural', '+5%', '+2Hz'),
-            ('11', 3.912, 'बस—सेफ रहो। अनजान फ़ाइल? स्किप।', 'hi-IN-MadhurNeural', '-2%', '-3Hz'),
+          # id, start, end, text, voice, rate, pitch, volume
+          segs = [
+            ('01',0.016,5.440,'ऑनलाइन प्राइवेसी चाहिए... शुरुआत कहाँ से करूँ? कौन से टूल ज़रूरी हैं?','en-IN-PrabhatNeural','-4%','-8Hz','+0%'),
+            ('02',5.872,8.000,'वॉल्टर... पहली गलती—क्रोम!','hi-IN-MadhurNeural','+2%','+8Hz','+8%'),
+            ('03',8.800,12.176,'प्राइवेसी चाहिए और क्रोम चला रहा है? कमाल है!','hi-IN-MadhurNeural','+8%','+12Hz','+10%'),
+            ('04',13.296,16.080,'पहले ब्राउज़र बदल. बस.','hi-IN-MadhurNeural','-2%','+2Hz','+3%'),
+            ('05',16.208,19.760,'वीपीएन, एक्सटेंशन्स, टॉरेंट—सब बाद में.','hi-IN-MadhurNeural','+6%','+4Hz','+6%'),
+            ('06',20.128,23.392,'बेस गड़बड़? बाकी सब बेकार.','hi-IN-MadhurNeural','-4%','-3Hz','+4%'),
+            ('07',24.112,27.968,'फ़ायरफ़ॉक्स, लिब्रेवुल्फ़ या मुलवाड ब्राउज़र.','hi-IN-MadhurNeural','+2%','+2Hz','+3%'),
+            ('08',28.240,30.704,'इनमें से एक उठा. बस.','hi-IN-MadhurNeural','-5%','-2Hz','+2%'),
+            ('09',30.720,33.424,'लिब्रेवुल्फ़ थोड़ा पैरानॉइड है...','hi-IN-MadhurNeural','-8%','-3Hz','+1%'),
+            ('10',34.224,38.240,'और प्राइवेसी में पैरानॉइड होना बुरा नहीं.','hi-IN-MadhurNeural','-2%','-1Hz','+3%'),
+            ('11',38.960,41.968,'वीपीएन? प्रोटॉन या मुलवाड. दोनों बढ़िया.','hi-IN-MadhurNeural','+5%','+6Hz','+6%'),
+            ('12',42.016,44.736,'रैंडम फ्री वीपीएन मत उठा.','hi-IN-MadhurNeural','+8%','+5Hz','+7%'),
+            ('13',44.800,46.832,'सच में.','hi-IN-MadhurNeural','-10%','-4Hz','+2%'),
+            ('14',47.664,50.512,'ब्राउज़र में यूब्लॉक ओरिजिन—मस्ट.','hi-IN-MadhurNeural','+8%','+8Hz','+7%'),
+            ('15',50.688,54.544,'फ़ास्टफ़ॉरवर्ड भी डाल. फालतू रीडायरेक्ट्स ख़त्म.','hi-IN-MadhurNeural','+10%','+6Hz','+7%'),
+            ('16',54.656,57.040,'छोटे टूल... बड़ा फर्क.','hi-IN-MadhurNeural','-8%','-2Hz','+2%'),
+            ('17',57.920,61.776,'टॉरेंट? क्यूबिटटॉरेंट या ट्रांसमिशन.','hi-IN-MadhurNeural','+4%','+2Hz','+4%'),
+            ('18',61.808,63.552,'क्लीन. सीधा. नो बकवास.','hi-IN-MadhurNeural','+8%','+1Hz','+5%'),
+            ('19',64.480,66.976,'और सुन... अनजान फ़ाइल?','hi-IN-MadhurNeural','-10%','-5Hz','+2%'),
+            ('20',67.776,69.152,'हीरो मत बन. स्किप.','hi-IN-MadhurNeural','-6%','-7Hz','+5%'),
           ]
           async def main():
-              for name, target, text, voice, rate, pitch in segments:
-                  tts = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
-                  await tts.save(f'raw/{name}.mp3')
+              for name,start,end,text,voice,rate,pitch,volume in segs:
+                  await edge_tts.Communicate(text,voice,rate=rate,pitch=pitch,volume=volume).save(f'raw/{name}.mp3')
           asyncio.run(main())
           PY
 
-      - name: Fit naturally to scene windows
+      - name: Fit beats without crushing performance
         shell: bash
         run: |
           set -euxo pipefail
           python - <<'PY'
           import subprocess, json
-          targets=[5.800,7.000,10.800,6.900,4.700,5.400,7.200,6.900,4.800,6.200,3.912]
-          for i,target in enumerate(targets,1):
-              name=f'{i:02d}'
-              meta=subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','json',f'raw/{name}.mp3'],text=True)
-              dur=float(json.loads(meta)['format']['duration'])
-              usable=max(0.8,target-0.10)
-              ratio=dur/usable
-              filters=['aresample=48000']
-              if ratio > 1.003:
+          windows=[
+            (0.016,5.440),(5.872,8.000),(8.800,12.176),(13.296,16.080),(16.208,19.760),
+            (20.128,23.392),(24.112,27.968),(28.240,30.704),(30.720,33.424),(34.224,38.240),
+            (38.960,41.968),(42.016,44.736),(44.800,46.832),(47.664,50.512),(50.688,54.544),
+            (54.656,57.040),(57.920,61.776),(61.808,63.552),(64.480,66.976),(67.776,69.152)
+          ]
+          for i,(start,end) in enumerate(windows,1):
+              name=f'{i:02d}'; target=end-start
+              meta=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','json',f'raw/{name}.mp3'],text=True))
+              dur=float(meta['format']['duration']); usable=max(.45,target-.04); ratio=dur/usable
+              filt=['aresample=48000']
+              if ratio>1.003:
                   r=ratio
-                  while r > 2.0:
-                      filters.append('atempo=2.0'); r/=2.0
-                  filters.append(f'atempo={r:.6f}')
-              if i == 1:
-                  filters += ['highpass=f=55','equalizer=f=180:t=q:w=1.0:g=4','equalizer=f=3200:t=q:w=1.2:g=-1.5']
+                  while r>2.0:
+                      filt.append('atempo=2.0'); r/=2.0
+                  filt.append(f'atempo={r:.6f}')
+              if i==1:
+                  filt += ['highpass=f=55','equalizer=f=170:t=q:w=1.0:g=4','equalizer=f=3300:t=q:w=1.2:g=-1.5']
               else:
-                  filters += ['highpass=f=70','equalizer=f=2600:t=q:w=1.1:g=1.5']
-              filters += [f'apad=pad_dur={target}',f'atrim=0:{target}','asetpts=PTS-STARTPTS']
-              subprocess.run(['ffmpeg','-y','-i',f'raw/{name}.mp3','-af',','.join(filters),'-ac','1','-c:a','pcm_s16le',f'fitted/{name}.wav'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-              print(name,'raw=',round(dur,3),'target=',round(target,3),'tempo=',round(max(1.0,ratio),3))
+                  filt += ['highpass=f=70','equalizer=f=230:t=q:w=1.0:g=1.0','equalizer=f=2800:t=q:w=1.0:g=1.8']
+              filt += [f'apad=pad_dur={target}',f'atrim=0:{target}','asetpts=PTS-STARTPTS']
+              subprocess.run(['ffmpeg','-y','-i',f'raw/{name}.mp3','-af',','.join(filt),'-ac','1','-c:a','pcm_s16le',f'fitted/{name}.wav'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+              print(name,'raw',round(dur,3),'window',round(target,3),'tempo',round(max(1.0,ratio),3))
           PY
 
-      - name: Assemble cinematic dialogue track
+      - name: Place dialogue on original speaking beats
         shell: bash
         run: |
           set -euxo pipefail
-          printf "file '../fitted/01.wav'\nfile '../fitted/02.wav'\nfile '../fitted/03.wav'\nfile '../fitted/04.wav'\nfile '../fitted/05.wav'\nfile '../fitted/06.wav'\nfile '../fitted/07.wav'\nfile '../fitted/08.wav'\nfile '../fitted/09.wav'\nfile '../fitted/10.wav'\nfile '../fitted/11.wav'\n" > final/list.txt
-          ffmpeg -y -f concat -safe 0 -i final/list.txt \
-            -af "acompressor=threshold=-24dB:ratio=1.45:attack=18:release=220,alimiter=limit=0.95,loudnorm=I=-16:TP=-1.5:LRA=12" \
-            -t 69.612 -c:a aac -b:a 192k final/CI-FI_2078_Character_Hindi_VO.m4a
-          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/CI-FI_2078_Character_Hindi_VO.m4a
+          python - <<'PY'
+          import subprocess
+          starts=[0.016,5.872,8.800,13.296,16.208,20.128,24.112,28.240,30.720,34.224,38.960,42.016,44.800,47.664,50.688,54.656,57.920,61.808,64.480,67.776]
+          args=[]; chains=[]; labels=[]
+          for i,s in enumerate(starts,1):
+              args += ['-i',f'fitted/{i:02d}.wav']
+              delay=round(s*1000)
+              lab=f'a{i}'
+              chains.append(f'[{i-1}:a]adelay={delay}|{delay}[{lab}]')
+              labels.append(f'[{lab}]')
+          mix=''.join(labels)+f'amix=inputs={len(labels)}:normalize=0,acompressor=threshold=-24dB:ratio=1.35:attack=20:release=250,alimiter=limit=0.96,loudnorm=I=-16:TP=-1.5:LRA=13[out]'
+          fc=';'.join(chains+[mix])
+          cmd=['ffmpeg','-y',*args,'-filter_complex',fc,'-map','[out]','-t','69.612','-c:a','aac','-b:a','192k','final/CI-FI_2078_Character_Hindi_V3.m4a']
+          subprocess.run(cmd,check=True)
+          PY
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/CI-FI_2078_Character_Hindi_V3.m4a
 
       - name: Upload narration
         uses: actions/upload-artifact@v4
         with:
-          name: cifi-2078-character-hindi-vo
-          path: final/CI-FI_2078_Character_Hindi_VO.m4a
+          name: cifi-2078-character-hindi-v3
+          path: final/CI-FI_2078_Character_Hindi_V3.m4a
           if-no-files-found: error
