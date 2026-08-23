@@ -33,8 +33,7 @@ jobs:
           import os, shutil, subprocess
           from gradio_client import Client, handle_file
 
-          client = Client('rahul7star/Chatterbox-Multilingual-TTS')
-
+          client = Client('TGPro1/Chatterbox-Multilingual-TTS')
           segs = [
             ('01','देखिए... ऑनलाइन प्राइवेसी चाहिए, तो शुरुआत सही ब्राउज़र से कीजिए।','refs/authoritative.mp3',0.62,0.72,1101),
             ('02','अरे भाई! क्रोम भी चलाना है और प्राइवेसी भी चाहिए? ये कैसा हिसाब है?','refs/blunt.mp3',0.92,0.76,2202),
@@ -46,12 +45,9 @@ jobs:
             ('08','और टॉरेंट के लिए? वहाँ भी कोई खास जुगाड़ है क्या?','refs/earnest.mp3',0.82,0.74,8808),
             ('09','क्यूबिटटॉरेंट या ट्रांसमिशन। और अनजान फ़ाइल दिखे... हीरो मत बनना, मत खोलना।','refs/authoritative.mp3',0.72,0.70,9909),
           ]
-
           def gen(name,text,ref,exag,temp,seed):
               result=client.predict(
                   text_input=text,
-                  lyrics_input='',
-                  mode='Speak 🗣️',
                   language_id='hi',
                   audio_prompt_path_input=handle_file(ref),
                   exaggeration_input=exag,
@@ -68,7 +64,6 @@ jobs:
                   if isinstance(path,dict): path=path.get('path') or path.get('name') or path.get('url')
               if not path: raise RuntimeError(f'No audio path: {result}')
               shutil.copyfile(path,f'raw/{name}.wav')
-
           for s in segs: gen(*s)
 
           with open('/tmp/concat.txt','w') as f:
