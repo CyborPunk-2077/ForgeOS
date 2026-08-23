@@ -1,6 +1,8 @@
 name: SangodX Natural Hindi VO
 
 on:
+  pull_request:
+    branches: [master]
   push:
     branches: [cifi-2078-kokoro-hindi-20260823]
     paths:
