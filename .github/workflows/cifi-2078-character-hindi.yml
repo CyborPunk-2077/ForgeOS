@@ -16,74 +16,70 @@ jobs:
           sudo apt-get install -y -qq ffmpeg
           python -m pip install --quiet edge-tts
 
-      - name: Generate micro-beat character performances
+      - name: Generate character acting beats
         shell: bash
         run: |
           set -euxo pipefail
           mkdir -p raw fitted final
           python - <<'PY'
           import asyncio, os, edge_tts
-
           segs = [
             ('01',0.016,5.440,'Online privacy... shuruaat kahan se karun? Kaun se tools chahiye?','en-IN-PrabhatNeural','-4%','-8Hz','+0%'),
             ('02',5.872,8.000,'क्रोम?!','hi-IN-MadhurNeural','-4%','+9Hz','+8%'),
-            ('03',8.800,12.176,'प्राइवेसी चाहिए... और क्रोम? वाह!','hi-IN-MadhurNeural','+1%','+11Hz','+10%'),
-            ('04',13.296,16.080,'ब्राउज़र बदल. बस.','hi-IN-MadhurNeural','-4%','+2Hz','+3%'),
+            ('03',8.800,13.150,'प्राइवेसी... क्रोम? वाह!','hi-IN-MadhurNeural','-2%','+11Hz','+10%'),
+            ('04',13.296,16.080,'ब्राउज़र बदल.','hi-IN-MadhurNeural','-6%','+1Hz','+3%'),
             ('05',16.208,19.760,'वीपीएन, एक्सटेंशन्स, टॉरेंट—सब बाद में.','hi-IN-MadhurNeural','+5%','+4Hz','+6%'),
             ('06',20.128,23.392,'बेस खराब? सब बेकार.','hi-IN-MadhurNeural','-5%','-3Hz','+4%'),
             ('07',24.112,27.968,'फ़ायरफ़ॉक्स, लिब्रेवुल्फ़ या मुलवाड ब्राउज़र.','hi-IN-MadhurNeural','+2%','+2Hz','+3%'),
-            ('08',28.240,30.704,'एक चुन. बस.','hi-IN-MadhurNeural','-6%','-2Hz','+2%'),
-            ('09',30.720,33.424,'लिब्रेवुल्फ़... थोड़ा पैरानॉइड.','hi-IN-MadhurNeural','-8%','-3Hz','+1%'),
+            ('08',28.240,30.704,'एक चुन.','hi-IN-MadhurNeural','-7%','-2Hz','+2%'),
+            ('09',30.720,34.100,'लिब्रेवुल्फ़... पैरानॉइड.','hi-IN-MadhurNeural','-9%','-3Hz','+1%'),
             ('10',34.224,38.240,'प्राइवेसी में पैरानॉइड होना बुरा नहीं.','hi-IN-MadhurNeural','-2%','-1Hz','+3%'),
             ('11',38.960,41.968,'प्रोटॉन. या मुलवाड.','hi-IN-MadhurNeural','-3%','+5Hz','+6%'),
             ('12',42.016,44.736,'रैंडम फ्री वीपीएन मत उठा.','hi-IN-MadhurNeural','+6%','+5Hz','+7%'),
             ('13',44.800,46.832,'सच में.','hi-IN-MadhurNeural','-10%','-4Hz','+2%'),
             ('14',47.664,50.512,'यूब्लॉक ओरिजिन—मस्ट.','hi-IN-MadhurNeural','+4%','+8Hz','+7%'),
             ('15',50.688,54.544,'फ़ास्टफ़ॉरवर्ड डाल. फालतू रीडायरेक्ट्स ख़त्म.','hi-IN-MadhurNeural','+7%','+6Hz','+7%'),
-            ('16',54.656,57.040,'छोटा टूल. बड़ा फर्क.','hi-IN-MadhurNeural','-8%','-2Hz','+2%'),
+            ('16',54.656,57.800,'छोटा टूल, फर्क बड़ा.','hi-IN-MadhurNeural','-6%','-2Hz','+2%'),
             ('17',57.920,61.776,'क्यूबिटटॉरेंट. या ट्रांसमिशन.','hi-IN-MadhurNeural','-1%','+2Hz','+4%'),
             ('18',61.808,63.552,'क्लीन.','hi-IN-MadhurNeural','-8%','+1Hz','+5%'),
             ('19',64.480,66.976,'अनजान फ़ाइल?','hi-IN-MadhurNeural','-10%','-5Hz','+2%'),
-            ('20',67.776,69.152,'स्किप.','hi-IN-MadhurNeural','-10%','-7Hz','+5%'),
+            ('20',67.776,69.600,'स्किप.','hi-IN-MadhurNeural','-10%','-7Hz','+5%'),
           ]
-
           async def render_one(name,text,voice,rate,pitch,volume):
-              last = None
+              last=None
               for attempt in range(5):
                   try:
-                      if os.path.exists(f'raw/{name}.mp3'):
-                          os.remove(f'raw/{name}.mp3')
-                      await edge_tts.Communicate(text,voice,rate=rate,pitch=pitch,volume=volume).save(f'raw/{name}.mp3')
-                      if os.path.getsize(f'raw/{name}.mp3') > 1000:
-                          return
+                      p=f'raw/{name}.mp3'
+                      if os.path.exists(p): os.remove(p)
+                      await edge_tts.Communicate(text,voice,rate=rate,pitch=pitch,volume=volume).save(p)
+                      if os.path.getsize(p)>1000: return
                   except Exception as e:
-                      last = e
-                  await asyncio.sleep(2 + attempt * 2)
+                      last=e
+                  await asyncio.sleep(2+attempt*2)
               raise RuntimeError(f'Failed segment {name}: {last}')
-
           async def main():
               for name,start,end,text,voice,rate,pitch,volume in segs:
                   await render_one(name,text,voice,rate,pitch,volume)
-                  await asyncio.sleep(0.7)
+                  await asyncio.sleep(.7)
           asyncio.run(main())
           PY
 
-      - name: Fit beats without crushing performance
+      - name: Fit beats gently
         shell: bash
         run: |
           set -euxo pipefail
           python - <<'PY'
-          import subprocess, json
+          import subprocess,json
           windows=[
-            (0.016,5.440),(5.872,8.000),(8.800,12.176),(13.296,16.080),(16.208,19.760),
-            (20.128,23.392),(24.112,27.968),(28.240,30.704),(30.720,33.424),(34.224,38.240),
+            (0.016,5.440),(5.872,8.000),(8.800,13.150),(13.296,16.080),(16.208,19.760),
+            (20.128,23.392),(24.112,27.968),(28.240,30.704),(30.720,34.100),(34.224,38.240),
             (38.960,41.968),(42.016,44.736),(44.800,46.832),(47.664,50.512),(50.688,54.544),
-            (54.656,57.040),(57.920,61.776),(61.808,63.552),(64.480,66.976),(67.776,69.152)
+            (54.656,57.800),(57.920,61.776),(61.808,63.552),(64.480,66.976),(67.776,69.600)
           ]
           for i,(start,end) in enumerate(windows,1):
               name=f'{i:02d}'; target=end-start
               meta=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','json',f'raw/{name}.mp3'],text=True))
-              dur=float(meta['format']['duration']); usable=max(.45,target-.08); ratio=dur/usable
+              dur=float(meta['format']['duration']); usable=max(.45,target-.06); ratio=dur/usable
               filt=['aresample=48000']
               if ratio>1.003:
                   r=ratio
@@ -99,7 +95,7 @@ jobs:
               print(name,'raw',round(dur,3),'window',round(target,3),'tempo',round(max(1.0,ratio),3))
           PY
 
-      - name: Place dialogue on original speaking beats
+      - name: Place dialogue on original performance beats
         shell: bash
         run: |
           set -euxo pipefail
@@ -109,17 +105,16 @@ jobs:
           args=[]; chains=[]; labels=[]
           for i,s in enumerate(starts,1):
               args += ['-i',f'fitted/{i:02d}.wav']
-              delay=round(s*1000); lab=f'a{i}'
-              chains.append(f'[{i-1}:a]adelay={delay}|{delay}[{lab}]'); labels.append(f'[{lab}]')
-          mix=''.join(labels)+f'amix=inputs={len(labels)}:normalize=0,acompressor=threshold=-24dB:ratio=1.25:attack=28:release=300,alimiter=limit=0.96,loudnorm=I=-16:TP=-1.5:LRA=15,apad=pad_dur=69.612,atrim=0:69.612[out]'
-          fc=';'.join(chains+[mix])
-          subprocess.run(['ffmpeg','-y',*args,'-filter_complex',fc,'-map','[out]','-t','69.612','-c:a','aac','-b:a','192k','final/CI-FI_2078_Character_Hindi_V5.m4a'],check=True)
+              d=round(s*1000); lab=f'a{i}'
+              chains.append(f'[{i-1}:a]adelay={d}|{d}[{lab}]'); labels.append(f'[{lab}]')
+          mix=''.join(labels)+f'amix=inputs={len(labels)}:normalize=0,acompressor=threshold=-24dB:ratio=1.22:attack=30:release=320,alimiter=limit=0.96,loudnorm=I=-16:TP=-1.5:LRA=15,apad=pad_dur=69.612,atrim=0:69.612[out]'
+          subprocess.run(['ffmpeg','-y',*args,'-filter_complex',';'.join(chains+[mix]),'-map','[out]','-t','69.612','-c:a','aac','-b:a','192k','final/CI-FI_2078_Character_Hindi_V6.m4a'],check=True)
           PY
-          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/CI-FI_2078_Character_Hindi_V5.m4a
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/CI-FI_2078_Character_Hindi_V6.m4a
 
       - name: Upload narration
         uses: actions/upload-artifact@v4
         with:
-          name: cifi-2078-character-hindi-v5
-          path: final/CI-FI_2078_Character_Hindi_V5.m4a
+          name: cifi-2078-character-hindi-v6
+          path: final/CI-FI_2078_Character_Hindi_V6.m4a
           if-no-files-found: error
