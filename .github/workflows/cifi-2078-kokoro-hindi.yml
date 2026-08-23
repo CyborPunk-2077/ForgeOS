@@ -32,77 +32,69 @@ jobs:
           import os, subprocess, json
           import soundfile as sf
           from kokoro import KPipeline
+          import numpy as np
 
           pipeline = KPipeline(lang_code='h')
-
           segs = [
-              ('01',0.016,5.440,'ऑनलाइन प्राइवेसी शुरू करनी है... कहाँ से शुरू करूँ? कौन से टूल्स सच में ज़रूरी हैं?','hm_omega',0.92),
-              ('02',5.872,8.000,'रुको... तुम अभी भी क्रोम चला रहे हो?!','hm_psi',1.02),
-              ('03',8.800,13.150,'प्राइवेसी चाहिए... और क्रोम भी? कमाल है, भाई.','hm_psi',1.00),
+              ('01',0.016,5.440,'ऑनलाइन प्राइवेसी शुरू करनी है... सबसे पहले क्या करूँ?','hm_omega',0.94),
+              ('02',5.872,8.000,'रुको... क्रोम? अभी भी?!','hm_psi',1.00),
+              ('03',8.800,13.150,'प्राइवेसी चाहिए... और क्रोम? भाई, कमाल है.','hm_psi',1.00),
               ('04',13.296,16.080,'सबसे पहले ब्राउज़र बदल.','hm_psi',0.96),
               ('05',16.208,19.760,'वीपीएन, एक्सटेंशन, टॉरेंट—सब बाद में.','hm_psi',1.02),
-              ('06',20.128,23.392,'बेस गलत है तो बाकी सब दिखावा है.','hm_psi',0.96),
-              ('07',24.112,27.968,'फ़ायरफ़ॉक्स, लिब्रेवुल्फ़, या मुलवाड ब्राउज़र.','hm_psi',1.04),
+              ('06',20.128,23.392,'बेस गलत है तो बाकी सब दिखावा है.','hm_psi',0.98),
+              ('07',24.112,27.968,'फ़ायरफ़ॉक्स, लिब्रेवुल्फ़, या मुलवाड ब्राउज़र.','hm_psi',1.05),
               ('08',28.240,30.704,'कोई एक चुन. बस.','hm_psi',0.93),
-              ('09',30.720,34.100,'लिब्रेवुल्फ़ थोड़ा पैरानॉइड है...','hm_psi',0.90),
-              ('10',34.224,38.240,'पर प्राइवेसी में थोड़ा पैरानॉइड होना ठीक है.','hm_psi',0.94),
-              ('11',38.960,41.968,'वीपीएन? प्रोटॉन. या मुलवाड.','hm_psi',0.98),
-              ('12',42.016,44.736,'रैंडम फ्री वीपीएन मत उठा लेना.','hm_psi',1.04),
-              ('13',44.800,46.832,'नहीं, सच में.','hm_psi',0.88),
-              ('14',47.664,50.512,'यूब्लॉक ओरिजिन—ये ज़रूरी है.','hm_psi',1.02),
-              ('15',50.688,54.544,'फ़ास्टफ़ॉरवर्ड डाल; फालतू रीडायरेक्ट गायब.','hm_psi',1.05),
-              ('16',54.656,57.800,'छोटा टूल... बड़ा सुकून.','hm_psi',0.88),
-              ('17',57.920,61.776,'टॉरेंट? क्यूबिटटॉरेंट. या ट्रांसमिशन.','hm_psi',0.99),
-              ('18',61.808,63.552,'साफ. सीधा.','hm_psi',0.88),
-              ('19',64.480,66.976,'और अनजान फ़ाइल दिखे?','hm_psi',0.86),
-              ('20',67.776,69.600,'मत खोल. बस.','hm_psi',0.84),
+              ('09',30.720,34.100,'लिब्रेवुल्फ़ थोड़ा पैरानॉइड है...','hm_psi',0.92),
+              ('10',34.224,38.240,'पर प्राइवेसी में थोड़ा पैरानॉइड होना ठीक है.','hm_psi',0.96),
+              ('11',38.960,41.968,'वीपीएन? प्रोटॉन. या मुलवाड.','hm_psi',0.99),
+              ('12',42.016,44.736,'रैंडम फ्री वीपीएन मत उठा लेना.','hm_psi',1.05),
+              ('13',44.800,46.832,'नहीं... सच में.','hm_psi',0.88),
+              ('14',47.664,50.512,'यूब्लॉक ओरिजिन. ज़रूरी है.','hm_psi',1.00),
+              ('15',50.688,54.544,'फ़ास्टफ़ॉरवर्ड डाल. रीडायरेक्ट गायब.','hm_psi',1.04),
+              ('16',54.656,57.800,'छोटा टूल... बड़ा सुकून.','hm_psi',0.90),
+              ('17',57.920,61.776,'टॉरेंट? क्यूबिटटॉरेंट. या ट्रांसमिशन.','hm_psi',1.00),
+              ('18',61.808,63.552,'साफ. सीधा.','hm_psi',0.90),
+              ('19',64.480,66.976,'अनजान फ़ाइल दिखे?','hm_psi',0.88),
+              ('20',67.776,69.600,'मत खोल. बस.','hm_psi',0.86),
           ]
 
           for name,start,end,text,voice,speed in segs:
-              chunks=[]
-              for _,_,audio in pipeline(text, voice=voice, speed=speed, split_pattern=r'\n+'):
-                  chunks.append(audio)
-              if not chunks:
-                  raise RuntimeError(f'No audio generated for {name}')
-              import numpy as np
-              audio=np.concatenate(chunks)
-              sf.write(f'raw/{name}.wav', audio, 24000)
+              chunks=[audio for _,_,audio in pipeline(text, voice=voice, speed=speed, split_pattern=r'\n+')]
+              if not chunks: raise RuntimeError(f'No audio generated for {name}')
+              sf.write(f'raw/{name}.wav', np.concatenate(chunks), 24000)
 
+          tempos=[]
           for name,start,end,text,voice,speed in segs:
               target=end-start
-              meta=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','json',f'raw/{name}.wav'], text=True))
-              dur=float(meta['format']['duration'])
-              usable=max(0.45,target-0.06)
-              ratio=dur/usable
+              meta=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','json',f'raw/{name}.wav'],text=True))
+              dur=float(meta['format']['duration']); usable=max(.45,target-.06); ratio=dur/usable
               if ratio > 1.20:
                   raise RuntimeError(f'Segment {name} too long for natural acting: raw={dur:.3f}s window={target:.3f}s ratio={ratio:.3f}')
-              filters=['aresample=48000']
-              if ratio > 1.003:
-                  filters.append(f'atempo={ratio:.6f}')
+              filt=['aresample=48000']
+              if ratio>1.003: filt.append(f'atempo={ratio:.6f}')
               if name=='01':
-                  filters += ['highpass=f=48','equalizer=f=155:t=q:w=1.0:g=2.0','equalizer=f=3200:t=q:w=1.0:g=-1.0']
+                  filt += ['highpass=f=48','equalizer=f=155:t=q:w=1.0:g=2.0','equalizer=f=3200:t=q:w=1.0:g=-1.0']
               else:
-                  filters += ['highpass=f=65','equalizer=f=250:t=q:w=1.0:g=0.7','equalizer=f=3100:t=q:w=1.0:g=1.1']
-              filters += [f'apad=pad_dur={target}',f'atrim=0:{target}','asetpts=PTS-STARTPTS']
-              subprocess.run(['ffmpeg','-y','-i',f'raw/{name}.wav','-af',','.join(filters),'-ac','1','-c:a','pcm_s16le',f'fitted/{name}.wav'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-              print(name,'raw',round(dur,3),'window',round(target,3),'tempo',round(max(1.0,ratio),3))
+                  filt += ['highpass=f=65','equalizer=f=250:t=q:w=1.0:g=0.7','equalizer=f=3100:t=q:w=1.0:g=1.1']
+              filt += [f'apad=pad_dur={target}',f'atrim=0:{target}','asetpts=PTS-STARTPTS']
+              subprocess.run(['ffmpeg','-y','-i',f'raw/{name}.wav','-af',','.join(filt),'-ac','1','-c:a','pcm_s16le',f'fitted/{name}.wav'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+              tempos.append((name,dur,target,max(1.0,ratio)))
+          for x in tempos: print(x[0],'raw',round(x[1],3),'window',round(x[2],3),'tempo',round(x[3],3))
 
           args=[]; chains=[]; labels=[]
           for idx,(name,start,end,*_) in enumerate(segs):
-              args += ['-i',f'fitted/{name}.wav']
-              delay=round(start*1000); lab=f'a{idx}'
-              chains.append(f'[{idx}:a]adelay={delay}|{delay}[{lab}]')
-              labels.append(f'[{lab}]')
-          mix=''.join(labels)+f'amix=inputs={len(labels)}:normalize=0,acompressor=threshold=-20dB:ratio=1.12:attack=35:release=340,alimiter=limit=0.97,loudnorm=I=-16:TP=-1.5:LRA=16,apad=pad_dur=69.612,atrim=0:69.612[out]'
-          subprocess.run(['ffmpeg','-y',*args,'-filter_complex',';'.join(chains+[mix]),'-map','[out]','-t','69.612','-c:a','aac','-b:a','192k','final/CI-FI_2078_Kokoro_Character_Hindi_V1.m4a'],check=True)
+              args += ['-i',f'fitted/{name}.wav']; d=round(start*1000); lab=f'a{idx}'
+              chains.append(f'[{idx}:a]adelay={d}|{d}[{lab}]'); labels.append(f'[{lab}]')
+          mix=''.join(labels)+f'amix=inputs={len(labels)}:normalize=0,acompressor=threshold=-20dB:ratio=1.10:attack=38:release=360,alimiter=limit=0.97,loudnorm=I=-16:TP=-1.5:LRA=16,apad=pad_dur=69.612,atrim=0:69.612[out]'
+          subprocess.run(['ffmpeg','-y',*args,'-filter_complex',';'.join(chains+[mix]),'-map','[out]','-t','69.612','-c:a','aac','-b:a','192k','final/CI-FI_2078_Kokoro_Character_Hindi_V2.m4a'],check=True)
           PY
           python /tmp/render.py
-          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/CI-FI_2078_Kokoro_Character_Hindi_V1.m4a
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 final/CI-FI_2078_Kokoro_Character_Hindi_V2.m4a
 
       - name: Upload fresh narration
         uses: actions/upload-artifact@v4
         with:
-          name: cifi-2078-kokoro-character-hindi-v1
-          path: final/CI-FI_2078_Kokoro_Character_Hindi_V1.m4a
+          name: cifi-2078-kokoro-character-hindi-v2
+          path: final/CI-FI_2078_Kokoro_Character_Hindi_V2.m4a
           if-no-files-found: error
           compression-level: 6
